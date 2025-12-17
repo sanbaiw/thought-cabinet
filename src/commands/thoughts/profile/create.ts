@@ -1,5 +1,5 @@
 import chalk from 'chalk'
-import readline from 'readline'
+import * as p from '@clack/prompts'
 import {
   loadThoughtsConfig,
   saveThoughtsConfig,
@@ -16,44 +16,41 @@ interface CreateOptions {
   configFile?: string
 }
 
-function prompt(question: string): Promise<string> {
-  const rl = readline.createInterface({
-    input: process.stdin,
-    output: process.stdout,
-  })
-
-  return new Promise(resolve => {
-    rl.question(question, answer => {
-      rl.close()
-      resolve(answer.trim())
-    })
-  })
-}
-
 export async function profileCreateCommand(
   profileName: string,
   options: CreateOptions,
 ): Promise<void> {
   try {
+    // Check for non-interactive mode
+    if (!options.repo || !options.reposDir || !options.globalDir) {
+      if (!process.stdin.isTTY) {
+        p.log.error('Not running in interactive terminal.')
+        p.log.info('Provide all options: --repo, --repos-dir, --global-dir')
+        process.exit(1)
+      }
+    }
+
     // Load existing config
     const config = loadThoughtsConfig(options as Record<string, unknown>)
 
     if (!config) {
-      console.error(chalk.red('Error: Thoughts not configured.'))
-      console.error('Run "thoughtcabinet init" first to set up the base configuration.')
+      p.log.error('Thoughts not configured.')
+      p.log.info('Run "thoughtcabinet init" first to set up the base configuration.')
       process.exit(1)
     }
 
     // Sanitize profile name
     const sanitizedName = sanitizeProfileName(profileName)
     if (sanitizedName !== profileName) {
-      console.log(chalk.yellow(`Profile name sanitized: "${profileName}" → "${sanitizedName}"`))
+      p.log.warn(`Profile name sanitized: "${profileName}" → "${sanitizedName}"`)
     }
+
+    p.intro(chalk.blue(`Creating Profile: ${sanitizedName}`))
 
     // Check if profile already exists
     if (validateProfile(config, sanitizedName)) {
-      console.error(chalk.red(`Error: Profile "${sanitizedName}" already exists.`))
-      console.error('Use a different name or delete the existing profile first.')
+      p.log.error(`Profile "${sanitizedName}" already exists.`)
+      p.log.info('Use a different name or delete the existing profile first.')
       process.exit(1)
     }
 
@@ -69,19 +66,44 @@ export async function profileCreateCommand(
       globalDir = options.globalDir
     } else {
       // Interactive mode
-      console.log(chalk.blue(`\n=== Creating Profile: ${sanitizedName} ===\n`))
-
       const defaultRepo = getDefaultThoughtsRepo() + `-${sanitizedName}`
-      console.log(chalk.gray('Specify the thoughts repository location for this profile.'))
-      const repoInput = await prompt(`Thoughts repository [${defaultRepo}]: `)
-      thoughtsRepo = repoInput || defaultRepo
+      p.log.info('Specify the thoughts repository location for this profile.')
 
-      console.log('')
-      const reposDirInput = await prompt(`Repository-specific thoughts directory [repos]: `)
-      reposDir = reposDirInput || 'repos'
+      const repoInput = await p.text({
+        message: 'Thoughts repository:',
+        initialValue: defaultRepo,
+        placeholder: defaultRepo,
+      })
 
-      const globalDirInput = await prompt(`Global thoughts directory [global]: `)
-      globalDir = globalDirInput || 'global'
+      if (p.isCancel(repoInput)) {
+        p.cancel('Operation cancelled.')
+        process.exit(0)
+      }
+      thoughtsRepo = (repoInput as string) || defaultRepo
+
+      const reposDirInput = await p.text({
+        message: 'Repository-specific thoughts directory:',
+        initialValue: 'repos',
+        placeholder: 'repos',
+      })
+
+      if (p.isCancel(reposDirInput)) {
+        p.cancel('Operation cancelled.')
+        process.exit(0)
+      }
+      reposDir = (reposDirInput as string) || 'repos'
+
+      const globalDirInput = await p.text({
+        message: 'Global thoughts directory:',
+        initialValue: 'global',
+        placeholder: 'global',
+      })
+
+      if (p.isCancel(globalDirInput)) {
+        p.cancel('Operation cancelled.')
+        process.exit(0)
+      }
+      globalDir = (globalDirInput as string) || 'global'
     }
 
     // Create profile config
@@ -103,24 +125,26 @@ export async function profileCreateCommand(
     saveThoughtsConfig(config, options as Record<string, unknown>)
 
     // Create the profile's thoughts repository structure
-    console.log(chalk.gray('\nInitializing profile thoughts repository...'))
+    p.log.step('Initializing profile thoughts repository...')
     ensureThoughtsRepoExists(profileConfig)
 
-    console.log(chalk.green(`\n✅ Profile "${sanitizedName}" created successfully!`))
-    console.log('')
-    console.log(chalk.blue('=== Profile Configuration ==='))
-    console.log(`  Name: ${chalk.cyan(sanitizedName)}`)
-    console.log(`  Thoughts repository: ${chalk.cyan(thoughtsRepo)}`)
-    console.log(`  Repos directory: ${chalk.cyan(reposDir)}`)
-    console.log(`  Global directory: ${chalk.cyan(globalDir)}`)
-    console.log('')
-    console.log(chalk.gray('Next steps:'))
-    console.log(
-      chalk.gray(`  1. Run "thoughtcabinet init --profile ${sanitizedName}" in a repository`),
+    p.log.success(`Profile "${sanitizedName}" created successfully!`)
+
+    p.note(
+      `Name: ${chalk.cyan(sanitizedName)}\n` +
+        `Thoughts repository: ${chalk.cyan(thoughtsRepo)}\n` +
+        `Repos directory: ${chalk.cyan(reposDir)}\n` +
+        `Global directory: ${chalk.cyan(globalDir)}`,
+      'Profile Configuration',
     )
-    console.log(chalk.gray(`  2. Your thoughts will sync to the profile's repository`))
+
+    p.outro(
+      chalk.gray('Next steps:\n') +
+        chalk.gray(`  1. Run "thoughtcabinet init --profile ${sanitizedName}" in a repository\n`) +
+        chalk.gray(`  2. Your thoughts will sync to the profile's repository`),
+    )
   } catch (error) {
-    console.error(chalk.red(`Error creating profile: ${error}`))
+    p.log.error(`Error creating profile: ${error}`)
     process.exit(1)
   }
 }

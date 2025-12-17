@@ -1,5 +1,5 @@
 import chalk from 'chalk'
-import readline from 'readline'
+import * as p from '@clack/prompts'
 import { loadThoughtsConfig, saveThoughtsConfig } from '../utils/index.js'
 import { validateProfile } from './utils.js'
 
@@ -8,34 +8,29 @@ interface DeleteOptions {
   configFile?: string
 }
 
-function prompt(question: string): Promise<string> {
-  const rl = readline.createInterface({
-    input: process.stdin,
-    output: process.stdout,
-  })
-
-  return new Promise(resolve => {
-    rl.question(question, answer => {
-      rl.close()
-      resolve(answer.trim())
-    })
-  })
-}
-
 export async function profileDeleteCommand(
   profileName: string,
   options: DeleteOptions,
 ): Promise<void> {
   try {
+    // Check for non-interactive mode
+    if (!options.force && !process.stdin.isTTY) {
+      p.log.error('Not running in interactive terminal.')
+      p.log.info('Use --force flag to delete without confirmation.')
+      process.exit(1)
+    }
+
+    p.intro(chalk.blue(`Delete Profile: ${profileName}`))
+
     const config = loadThoughtsConfig(options)
 
     if (!config) {
-      console.error(chalk.red('Error: Thoughts not configured.'))
+      p.log.error('Thoughts not configured.')
       process.exit(1)
     }
 
     if (!validateProfile(config, profileName)) {
-      console.error(chalk.red(`Error: Profile "${profileName}" not found.`))
+      p.log.error(`Profile "${profileName}" not found.`)
       process.exit(1)
     }
 
@@ -48,19 +43,13 @@ export async function profileDeleteCommand(
     })
 
     if (usingRepos.length > 0 && !options.force) {
-      console.error(
-        chalk.red(
-          `Error: Profile "${profileName}" is in use by ${usingRepos.length} repository(ies):`,
-        ),
-      )
-      console.error('')
+      p.log.error(`Profile "${profileName}" is in use by ${usingRepos.length} repository(ies):`)
       usingRepos.forEach(repo => {
-        console.error(chalk.gray(`  - ${repo}`))
+        p.log.message(chalk.gray(`  - ${repo}`))
       })
-      console.error('')
-      console.error(chalk.yellow('Options:'))
-      console.error(chalk.gray('  1. Run "thoughtcabinet destroy" in each repository'))
-      console.error(
+      p.log.warn('Options:')
+      p.log.message(chalk.gray('  1. Run "thoughtcabinet destroy" in each repository'))
+      p.log.message(
         chalk.gray('  2. Use --force to delete anyway (repos will fall back to default config)'),
       )
       process.exit(1)
@@ -68,14 +57,17 @@ export async function profileDeleteCommand(
 
     // Confirm deletion
     if (!options.force) {
-      console.log(chalk.yellow(`\nYou are about to delete profile: ${chalk.cyan(profileName)}`))
-      console.log(chalk.gray('This will remove the profile configuration.'))
-      console.log(chalk.gray('The thoughts repository files will NOT be deleted.'))
-      console.log('')
-      const confirm = await prompt('Are you sure? (y/N): ')
+      p.log.warn(`You are about to delete profile: ${chalk.cyan(profileName)}`)
+      p.log.message(chalk.gray('This will remove the profile configuration.'))
+      p.log.message(chalk.gray('The thoughts repository files will NOT be deleted.'))
 
-      if (confirm.toLowerCase() !== 'y') {
-        console.log('Deletion cancelled.')
+      const confirmDelete = await p.confirm({
+        message: `Delete profile "${profileName}"?`,
+        initialValue: false,
+      })
+
+      if (p.isCancel(confirmDelete) || !confirmDelete) {
+        p.cancel('Deletion cancelled.')
         return
       }
     }
@@ -91,18 +83,15 @@ export async function profileDeleteCommand(
     // Save config
     saveThoughtsConfig(config, options)
 
-    console.log(chalk.green(`\n✅ Profile "${profileName}" deleted`))
+    p.log.success(`Profile "${profileName}" deleted`)
 
     if (usingRepos.length > 0) {
-      console.log('')
-      console.log(
-        chalk.yellow(
-          '⚠️  Warning: Repositories using this profile will fall back to default config',
-        ),
-      )
+      p.log.warn('Repositories using this profile will fall back to default config')
     }
+
+    p.outro(chalk.green('Done'))
   } catch (error) {
-    console.error(chalk.red(`Error deleting profile: ${error}`))
+    p.log.error(`Error deleting profile: ${error}`)
     process.exit(1)
   }
 }
