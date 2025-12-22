@@ -4,18 +4,20 @@ import chalk from 'chalk'
 import * as p from '@clack/prompts'
 import { fileURLToPath } from 'url'
 import { dirname } from 'path'
+import { AgentProduct } from './registry.js'
 
 // Get the directory of this module
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = dirname(__filename)
 
-interface InitOptions {
+export interface AgentInitOptions {
+  product: AgentProduct
   force?: boolean
   all?: boolean
   maxThinkingTokens?: number
 }
 
-function ensureGitignoreEntry(targetDir: string, entry: string): void {
+function ensureGitignoreEntry(targetDir: string, entry: string, productName: string): void {
   const gitignorePath = path.join(targetDir, '.gitignore')
 
   // Read existing .gitignore or create empty
@@ -34,16 +36,20 @@ function ensureGitignoreEntry(targetDir: string, entry: string): void {
   const newContent =
     gitignoreContent +
     (gitignoreContent && !gitignoreContent.endsWith('\n') ? '\n' : '') +
-    '\n# Claude Code local settings\n' +
+    '\n# ' +
+    productName +
+    ' local settings\n' +
     entry +
     '\n'
 
   fs.writeFileSync(gitignorePath, newContent)
 }
 
-export async function claudeInitCommand(options: InitOptions): Promise<void> {
+export async function agentInitCommand(options: AgentInitOptions): Promise<void> {
+  const { product } = options
+
   try {
-    p.intro(chalk.blue('Initialize Claude Code Configuration'))
+    p.intro(chalk.blue(`Initialize ${product.name} Configuration`))
 
     // Check if running in interactive terminal
     if (!process.stdin.isTTY && !options.all) {
@@ -53,28 +59,28 @@ export async function claudeInitCommand(options: InitOptions): Promise<void> {
     }
 
     const targetDir = process.cwd()
-    const claudeTargetDir = path.join(targetDir, '.claude')
+    const agentTargetDir = path.join(targetDir, product.dirName)
 
     // Determine source location
-    // Try multiple possible locations for the .claude directory
+    // Try multiple possible locations for the agent directory
     const possiblePaths = [
       // When installed via npm: package root is one level up from dist
-      path.resolve(__dirname, '..', '.claude'),
+      path.resolve(__dirname, '..', product.sourceDirName),
       // When running from repo: repo root is two levels up from dist
-      path.resolve(__dirname, '../..', '.claude'),
+      path.resolve(__dirname, '../..', product.sourceDirName),
     ]
 
-    let sourceClaudeDir: string | null = null
+    let sourceAgentDir: string | null = null
     for (const candidatePath of possiblePaths) {
       if (fs.existsSync(candidatePath)) {
-        sourceClaudeDir = candidatePath
+        sourceAgentDir = candidatePath
         break
       }
     }
 
     // Verify source directory exists
-    if (!sourceClaudeDir) {
-      p.log.error('Source .claude directory not found in expected locations')
+    if (!sourceAgentDir) {
+      p.log.error(`Source ${product.dirName} directory not found in expected locations`)
       p.log.info('Searched paths:')
       possiblePaths.forEach(candidatePath => {
         p.log.info(`  - ${candidatePath}`)
@@ -83,10 +89,10 @@ export async function claudeInitCommand(options: InitOptions): Promise<void> {
       process.exit(1)
     }
 
-    // Check if .claude already exists
-    if (fs.existsSync(claudeTargetDir) && !options.force) {
+    // Check if agent directory already exists
+    if (fs.existsSync(agentTargetDir) && !options.force) {
       const overwrite = await p.confirm({
-        message: '.claude directory already exists. Overwrite?',
+        message: `${product.dirName} directory already exists. Overwrite?`,
         initialValue: false,
       })
 
@@ -106,8 +112,8 @@ export async function claudeInitCommand(options: InitOptions): Promise<void> {
       let commandsCount = 0
       let agentsCount = 0
 
-      const commandsDir = path.join(sourceClaudeDir, 'commands')
-      const agentsDir = path.join(sourceClaudeDir, 'agents')
+      const commandsDir = path.join(sourceAgentDir, 'commands')
+      const agentsDir = path.join(sourceAgentDir, 'agents')
 
       if (fs.existsSync(commandsDir)) {
         commandsCount = fs.readdirSync(commandsDir).length
@@ -157,8 +163,8 @@ export async function claudeInitCommand(options: InitOptions): Promise<void> {
       }
     }
 
-    // Create .claude directory
-    fs.mkdirSync(claudeTargetDir, { recursive: true })
+    // Create agent directory
+    fs.mkdirSync(agentTargetDir, { recursive: true })
 
     let filesCopied = 0
     let filesSkipped = 0
@@ -170,7 +176,7 @@ export async function claudeInitCommand(options: InitOptions): Promise<void> {
     if (!options.all) {
       // Commands file selection (if selected)
       if (selectedCategories.includes('commands')) {
-        const sourceDir = path.join(sourceClaudeDir, 'commands')
+        const sourceDir = path.join(sourceAgentDir, 'commands')
         if (fs.existsSync(sourceDir)) {
           const allFiles = fs.readdirSync(sourceDir)
           const fileSelection = await p.multiselect({
@@ -198,7 +204,7 @@ export async function claudeInitCommand(options: InitOptions): Promise<void> {
 
       // Agents file selection (if selected)
       if (selectedCategories.includes('agents')) {
-        const sourceDir = path.join(sourceClaudeDir, 'agents')
+        const sourceDir = path.join(sourceAgentDir, 'agents')
         if (fs.existsSync(sourceDir)) {
           const allFiles = fs.readdirSync(sourceDir)
           const fileSelection = await p.multiselect({
@@ -260,8 +266,8 @@ export async function claudeInitCommand(options: InitOptions): Promise<void> {
     // Copy selected categories
     for (const category of selectedCategories) {
       if (category === 'commands' || category === 'agents') {
-        const sourceDir = path.join(sourceClaudeDir, category)
-        const targetCategoryDir = path.join(claudeTargetDir, category)
+        const sourceDir = path.join(sourceAgentDir, category)
+        const targetCategoryDir = path.join(agentTargetDir, category)
 
         if (!fs.existsSync(sourceDir)) {
           p.log.warn(`${category} directory not found in source, skipping`)
@@ -295,8 +301,8 @@ export async function claudeInitCommand(options: InitOptions): Promise<void> {
         filesSkipped += allFiles.length - filesToCopy.length
         p.log.success(`Copied ${filesToCopy.length} ${category} file(s)`)
       } else if (category === 'settings') {
-        const settingsPath = path.join(sourceClaudeDir, 'settings.json')
-        const targetSettingsPath = path.join(claudeTargetDir, 'settings.json')
+        const settingsPath = path.join(sourceAgentDir, 'settings.json')
+        const targetSettingsPath = path.join(agentTargetDir, 'settings.json')
 
         if (fs.existsSync(settingsPath)) {
           // Read source settings
@@ -310,11 +316,14 @@ export async function claudeInitCommand(options: InitOptions): Promise<void> {
             }
             settings.env.MAX_THINKING_TOKENS = maxThinkingTokens.toString()
           }
-          // Always set CLAUDE_BASH_MAINTAIN_WORKING_DIR to 1
+
+          // Set product-specific environment variables
           if (!settings.env) {
             settings.env = {}
           }
-          settings.env.CLAUDE_BASH_MAINTAIN_WORKING_DIR = '1'
+          for (const [key, value] of Object.entries(product.defaultEnvVars)) {
+            settings.env[key] = value
+          }
 
           // Write modified settings
           fs.writeFileSync(targetSettingsPath, JSON.stringify(settings, null, 2) + '\n')
@@ -328,19 +337,19 @@ export async function claudeInitCommand(options: InitOptions): Promise<void> {
 
     // Update .gitignore to exclude settings.local.json
     if (selectedCategories.includes('settings')) {
-      ensureGitignoreEntry(targetDir, '.claude/settings.local.json')
+      ensureGitignoreEntry(targetDir, product.gitignoreEntry, product.name)
       p.log.info('Updated .gitignore to exclude settings.local.json')
     }
 
-    let message = `Successfully copied ${filesCopied} file(s) to ${claudeTargetDir}`
+    let message = `Successfully copied ${filesCopied} file(s) to ${agentTargetDir}`
     if (filesSkipped > 0) {
       message += chalk.gray(`\n   Skipped ${filesSkipped} file(s)`)
     }
-    message += chalk.gray('\n   You can now use these commands in Claude Code.')
+    message += chalk.gray(`\n   You can now use these commands in ${product.name}.`)
 
     p.outro(message)
   } catch (error) {
-    p.log.error(`Error during claude init: ${error}`)
+    p.log.error(`Error during ${product.name} init: ${error}`)
     process.exit(1)
   }
 }
