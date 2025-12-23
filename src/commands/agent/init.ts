@@ -301,7 +301,7 @@ export async function agentInitCommand(options: AgentInitOptions): Promise<void>
         filesSkipped += allFiles.length - filesToCopy.length
         p.log.success(`Copied ${filesToCopy.length} ${category} file(s)`)
       } else if (category === 'settings') {
-        const settingsPath = path.join(sourceAgentDir, 'settings.json')
+        const settingsPath = path.join(sourceAgentDir, 'settings.template.json')
         const targetSettingsPath = path.join(agentTargetDir, 'settings.json')
 
         if (fs.existsSync(settingsPath)) {

@@ -19,7 +19,7 @@ export const AGENT_PRODUCTS: Record<string, AgentProduct> = {
     id: 'claude',
     name: 'Claude Code',
     dirName: '.claude',
-    sourceDirName: '.claude',
+    sourceDirName: 'src/agent-assets',
     envVarPrefix: 'CLAUDE',
     defaultEnvVars: {
       MAX_THINKING_TOKENS: '32000',
@@ -31,7 +31,7 @@ export const AGENT_PRODUCTS: Record<string, AgentProduct> = {
     id: 'codebuddy',
     name: 'CodeBuddy Code',
     dirName: '.codebuddy',
-    sourceDirName: '.codebuddy',
+    sourceDirName: 'src/agent-assets',
     envVarPrefix: 'CODEBUDDY',
     defaultEnvVars: {
       MAX_THINKING_TOKENS: '32000',

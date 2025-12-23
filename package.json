@@ -9,8 +9,7 @@
   },
   "files": [
     "dist/**/*",
-    ".claude/**/*",
-    ".codebuddy/**/*",
+    "src/agent-assets/**/*",
     "README.md"
   ],
   "scripts": {
