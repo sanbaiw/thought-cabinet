@@ -45,6 +45,35 @@ function ensureGitignoreEntry(targetDir: string, entry: string, productName: str
   fs.writeFileSync(gitignorePath, newContent)
 }
 
+/**
+ * Recursively copy a directory
+ * @returns Number of files copied
+ */
+function copyDirectoryRecursive(sourceDir: string, targetDir: string): number {
+  let filesCopied = 0
+
+  // Create target directory
+  fs.mkdirSync(targetDir, { recursive: true })
+
+  const entries = fs.readdirSync(sourceDir, { withFileTypes: true })
+
+  for (const entry of entries) {
+    const sourcePath = path.join(sourceDir, entry.name)
+    const targetPath = path.join(targetDir, entry.name)
+
+    if (entry.isDirectory()) {
+      // Recursively copy subdirectory
+      filesCopied += copyDirectoryRecursive(sourcePath, targetPath)
+    } else {
+      // Copy file
+      fs.copyFileSync(sourcePath, targetPath)
+      filesCopied++
+    }
+  }
+
+  return filesCopied
+}
+
 export async function agentInitCommand(options: AgentInitOptions): Promise<void> {
   const { product } = options
 
@@ -105,7 +134,7 @@ export async function agentInitCommand(options: AgentInitOptions): Promise<void>
     let selectedCategories: string[]
 
     if (options.all) {
-      selectedCategories = ['commands', 'agents', 'settings']
+      selectedCategories = ['commands', 'agents', 'skills', 'settings']
     } else {
       // Interactive selection
       // Calculate actual file counts
@@ -121,6 +150,16 @@ export async function agentInitCommand(options: AgentInitOptions): Promise<void>
 
       if (fs.existsSync(agentsDir)) {
         agentsCount = fs.readdirSync(agentsDir).length
+      }
+
+      let skillsCount = 0
+      const skillsDir = path.join(sourceAgentDir, 'skills')
+
+      if (fs.existsSync(skillsDir)) {
+        // Count skill folders (not files)
+        skillsCount = fs
+          .readdirSync(skillsDir, { withFileTypes: true })
+          .filter(dirent => dirent.isDirectory()).length
       }
 
       p.note(
@@ -141,12 +180,17 @@ export async function agentInitCommand(options: AgentInitOptions): Promise<void>
             hint: `${agentsCount} specialized sub-agents for code analysis`,
           },
           {
+            value: 'skills',
+            label: 'Skills',
+            hint: `${skillsCount} specialized skill packages for extended capabilities`,
+          },
+          {
             value: 'settings',
             label: 'Settings',
             hint: 'Project permissions configuration',
           },
         ],
-        initialValues: ['commands', 'agents', 'settings'],
+        initialValues: ['commands', 'agents', 'skills', 'settings'],
         required: false,
       })
 
@@ -226,6 +270,37 @@ export async function agentInitCommand(options: AgentInitOptions): Promise<void>
 
           if (filesToCopyByCategory['agents'].length === 0) {
             filesSkipped += allFiles.length
+          }
+        }
+      }
+
+      // Skills folder selection (if selected)
+      if (selectedCategories.includes('skills')) {
+        const sourceDir = path.join(sourceAgentDir, 'skills')
+        if (fs.existsSync(sourceDir)) {
+          // Get skill folders (directories only)
+          const allSkills = fs
+            .readdirSync(sourceDir, { withFileTypes: true })
+            .filter(dirent => dirent.isDirectory())
+            .map(dirent => dirent.name)
+
+          if (allSkills.length > 0) {
+            const skillSelection = await p.multiselect({
+              message: 'Select skills to copy:',
+              options: allSkills.map(skill => ({
+                value: skill,
+                label: skill,
+              })),
+              initialValues: allSkills,
+              required: false,
+            })
+
+            if (p.isCancel(skillSelection)) {
+              p.cancel('Operation cancelled.')
+              process.exit(0)
+            }
+
+            filesToCopyByCategory['skills'] = skillSelection as string[]
           }
         }
       }
@@ -332,6 +407,46 @@ export async function agentInitCommand(options: AgentInitOptions): Promise<void>
         } else {
           p.log.warn('settings.json not found in source, skipping')
         }
+      } else if (category === 'skills') {
+        const sourceDir = path.join(sourceAgentDir, 'skills')
+        const targetCategoryDir = path.join(agentTargetDir, 'skills')
+
+        if (!fs.existsSync(sourceDir)) {
+          p.log.warn('skills directory not found in source, skipping')
+          continue
+        }
+
+        // Get all skill folders
+        const allSkills = fs
+          .readdirSync(sourceDir, { withFileTypes: true })
+          .filter(dirent => dirent.isDirectory())
+          .map(dirent => dirent.name)
+
+        // Determine which skills to copy
+        let skillsToCopy = allSkills
+        if (!options.all && filesToCopyByCategory['skills']) {
+          skillsToCopy = filesToCopyByCategory['skills']
+        }
+
+        if (skillsToCopy.length === 0) {
+          continue
+        }
+
+        // Create skills directory
+        fs.mkdirSync(targetCategoryDir, { recursive: true })
+
+        // Copy each selected skill folder recursively
+        let skillFilesCopied = 0
+        for (const skill of skillsToCopy) {
+          const sourceSkillPath = path.join(sourceDir, skill)
+          const targetSkillPath = path.join(targetCategoryDir, skill)
+
+          skillFilesCopied += copyDirectoryRecursive(sourceSkillPath, targetSkillPath)
+        }
+
+        filesCopied += skillFilesCopied
+        filesSkipped += allSkills.length - skillsToCopy.length // Count skipped skills (not files)
+        p.log.success(`Copied ${skillsToCopy.length} skill(s) (${skillFilesCopied} files)`)
       }
     }
 
