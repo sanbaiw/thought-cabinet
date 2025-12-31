@@ -1,6 +1,6 @@
 {
   "name": "thought-cabinet",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "description": "Thought Cabinet (thc) - thoughts management CLI for developer notes and documentation",
   "type": "module",
   "main": "dist/index.js",
