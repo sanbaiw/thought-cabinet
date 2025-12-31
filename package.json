@@ -1,8 +1,10 @@
 {
   "name": "thought-cabinet",
-  "version": "0.1.0",
+  "version": "0.0.2",
   "description": "Thought Cabinet (thc) - thoughts management CLI for developer notes and documentation",
   "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
   "bin": {
     "thoughtcabinet": "dist/index.js",
     "thc": "dist/index.js"
@@ -19,6 +21,7 @@
     "lint": "eslint . --ext .ts",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
+    "prepublish": "npm run clean && npm run build",
     "test": "vitest run --passWithNoTests",
     "test:watch": "vitest",
     "check": "npm run format:check && npm run lint && npm run test && npm run build",
