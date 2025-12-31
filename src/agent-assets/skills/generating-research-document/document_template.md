@@ -91,6 +91,7 @@ When adding follow-up research, append:
 ```
 
 Also update frontmatter:
+
 - `last_updated`: Current date
 - `last_updated_by`: Researcher name
 - Add `last_updated_note: "Added follow-up research for [brief description]"`
