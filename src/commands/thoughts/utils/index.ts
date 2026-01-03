@@ -10,6 +10,7 @@ export {
   getRepoNameFromPath,
   getRepoThoughtsPath,
   getGlobalThoughtsPath,
+  getMainRepoPath,
 } from './paths.js'
 
 // Repository - initialization and structure

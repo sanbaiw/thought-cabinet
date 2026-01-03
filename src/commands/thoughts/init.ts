@@ -16,8 +16,10 @@ import {
   getRepoThoughtsPath,
   getGlobalThoughtsPath,
   updateSymlinksForNewUsers,
+  getMainRepoPath,
 } from './utils/index.js'
-import { validateProfile, resolveProfileForRepo, getRepoNameFromMapping } from './profile/utils.js'
+import { validateProfile, resolveProfileForRepo, getRepoNameFromMapping, getProfileNameFromMapping } from './profile/utils.js'
+import { RepoMappingObject } from '../../config.js'
 import {
   generateClaudeMd,
   generatePreCommitHook,
@@ -362,7 +364,7 @@ export async function thoughtsInitCommand(options: InitOptions): Promise<void> {
     }
 
     // Ensure thoughts repo still exists (might have been deleted)
-    const expandedRepo = expandPath(tempProfileConfig.thoughtsRepo)
+    let expandedRepo = expandPath(tempProfileConfig.thoughtsRepo)
     if (!fs.existsSync(expandedRepo)) {
       p.log.error(`Thoughts repository not found at ${tempProfileConfig.thoughtsRepo}`)
       p.log.warn('The thoughts repository may have been moved or deleted.')
@@ -401,6 +403,16 @@ export async function thoughtsInitCommand(options: InitOptions): Promise<void> {
     const existingMapping = config.repoMappings[currentRepo]
     let mappedName = getRepoNameFromMapping(existingMapping)
 
+    // 检测是否为 worktree，并查找主仓库的映射
+    let mainRepoMapping: string | RepoMappingObject | undefined
+    let mainRepoPath: string | null = null
+    if (!mappedName) {
+      mainRepoPath = getMainRepoPath()
+      if (mainRepoPath && config.repoMappings[mainRepoPath]) {
+        mainRepoMapping = config.repoMappings[mainRepoPath]
+      }
+    }
+
     if (!mappedName) {
       if (options.directory) {
         // Non-interactive mode with --directory option
@@ -431,15 +443,40 @@ export async function thoughtsInitCommand(options: InitOptions): Promise<void> {
         )
         p.log.message(chalk.gray('to store thoughts specific to this repository.'))
 
-        if (existingRepos.length > 0) {
-          const selectOptions = [
-            ...existingRepos.map(repo => ({ value: repo, label: `Use existing: ${repo}` })),
-            { value: '__create_new__', label: 'Create new directory' },
-          ]
+        if (existingRepos.length > 0 || mainRepoMapping) {
+          // 构建选项列表
+          const selectOptions: Array<{ value: string; label: string }> = []
+          let initialValue: string | undefined
+
+          // 场景1: worktree 有主仓库映射 - 优先显示并默认选中
+          const mainRepoMappedName = getRepoNameFromMapping(mainRepoMapping)
+          if (mainRepoMappedName && existingRepos.includes(mainRepoMappedName)) {
+            selectOptions.push({
+              value: mainRepoMappedName,
+              label: `Use existing: ${mainRepoMappedName} (from main repository)`,
+            })
+            initialValue = mainRepoMappedName
+          }
+
+          // 添加其他现有目录（排除已添加的主仓库映射）
+          existingRepos
+            .filter(repo => repo !== mainRepoMappedName)
+            .forEach(repo => {
+              selectOptions.push({ value: repo, label: `Use existing: ${repo}` })
+            })
+
+          // 创建新目录选项
+          selectOptions.push({ value: '__create_new__', label: 'Create new directory' })
+
+          // 场景2: 全新 repo（无 worktree 关联）- 默认选择创建新目录
+          if (!initialValue) {
+            initialValue = '__create_new__'
+          }
 
           const selection = await p.select({
             message: 'Select or create a thoughts directory for this repository:',
             options: selectOptions,
+            initialValue,
           })
 
           if (p.isCancel(selection)) {
@@ -475,12 +512,22 @@ export async function thoughtsInitCommand(options: InitOptions): Promise<void> {
             )
           } else {
             mappedName = selection as string
+
+            // 如果选择了主仓库的目录，继承其 profile
+            if (mainRepoMapping && mappedName === mainRepoMappedName) {
+              const inheritedProfile = getProfileNameFromMapping(mainRepoMapping)
+              if (inheritedProfile && !options.profile) {
+                options.profile = inheritedProfile
+                p.log.info(`Inheriting profile "${inheritedProfile}" from main repository`)
+              }
+            }
+
             p.log.success(
               `Will use existing: ${tempProfileConfig.thoughtsRepo}/${tempProfileConfig.reposDir}/${mappedName}`,
             )
           }
         } else {
-          // No existing repos, just create new
+          // No existing repos and no worktree mapping, just create new
           const defaultName = getRepoNameFromPath(currentRepo)
           p.log.message(
             chalk.gray(
@@ -519,6 +566,15 @@ export async function thoughtsInitCommand(options: InitOptions): Promise<void> {
         config.repoMappings[currentRepo] = mappedName
       }
       saveThoughtsConfig(config, options)
+
+      // 如果继承了 profile，需要刷新 expandedRepo 以用于后续的 git pull 操作
+      const inheritedProfile = getProfileNameFromMapping(mainRepoMapping)
+      if (inheritedProfile && options.profile === inheritedProfile && tempProfileConfig.profileName !== inheritedProfile) {
+        const profileSettings = config.profiles?.[inheritedProfile]
+        if (profileSettings) {
+          expandedRepo = expandPath(profileSettings.thoughtsRepo)
+        }
+      }
     }
 
     // Ensure mappedName is resolved when mapping already existed
