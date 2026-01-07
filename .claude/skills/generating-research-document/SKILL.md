@@ -10,9 +10,11 @@ Generate research documentation for the thoughts/ directory with proper metadata
 ## Workflow
 
 1. **Gather metadata**
+
    ```bash
    thoughtcabinet metadata
    ```
+
    Captures: researcher name, git commit, branch, repository, timestamp
 
 2. **Determine filename**
