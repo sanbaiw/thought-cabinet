@@ -4,6 +4,7 @@ import { Command } from 'commander'
 import { thoughtsCommand } from './commands/thoughts.js'
 import { agentCommand } from './commands/agent.js'
 import { metadataCommand } from './commands/metadata.js'
+import { worktreeCommand } from './commands/worktree.js'
 import dotenv from 'dotenv'
 import { createRequire } from 'node:module'
 
@@ -26,5 +27,6 @@ program
 thoughtsCommand(program)
 agentCommand(program)
 metadataCommand(program)
+worktreeCommand(program)
 
 program.parse(process.argv)
