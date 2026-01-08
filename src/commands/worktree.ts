@@ -132,11 +132,49 @@ export function worktreeCommand(program: Command): void {
           return
         }
 
-        console.log('NAME\tBRANCH\tTMUX\tPATH')
-        for (const e of filtered) {
+        // Get current working directory for highlighting
+        const cwd = process.cwd()
+
+        // Prepare data rows with current marker
+        const rows = filtered.map(e => {
           const name = path.basename(e.worktreePath)
-          const sessionName = allSessionNamesForHandle(name).find(s => sessions.has(s))
-          console.log(`${name}\t${e.branch}\t${sessionName ?? '-'}\t${e.worktreePath}`)
+          const sessionName = allSessionNamesForHandle(name).find(s => sessions.has(s)) ?? '-'
+          const isCurrent = path.resolve(e.worktreePath) === path.resolve(cwd)
+          return {
+            name: isCurrent ? `* ${name}` : `  ${name}`,
+            branch: e.branch,
+            tmux: sessionName,
+            path: e.worktreePath,
+            isCurrent,
+          }
+        })
+
+        // Calculate column widths
+        const colWidths = {
+          name: Math.max('NAME'.length + 2, ...rows.map(r => r.name.length)),
+          branch: Math.max('BRANCH'.length, ...rows.map(r => r.branch.length)),
+          tmux: Math.max('TMUX'.length, ...rows.map(r => r.tmux.length)),
+        }
+
+        // Print header
+        console.log(
+          chalk.blue(
+            `${'  NAME'.padEnd(colWidths.name)}  ` +
+              `${'BRANCH'.padEnd(colWidths.branch)}  ` +
+              `${'TMUX'.padEnd(colWidths.tmux)}  ` +
+              `PATH`,
+          ),
+        )
+
+        // Print data rows
+        for (const row of rows) {
+          const line =
+            `${row.name.padEnd(colWidths.name)}  ` +
+            `${row.branch.padEnd(colWidths.branch)}  ` +
+            `${row.tmux.padEnd(colWidths.tmux)}  ` +
+            `${row.path}`
+
+          console.log(row.isCurrent ? chalk.green(line) : line)
         }
       } catch (error) {
         console.error(chalk.red(`Error: ${(error as Error).message}`))
