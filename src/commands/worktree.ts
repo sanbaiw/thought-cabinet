@@ -30,6 +30,7 @@ import {
   loadThoughtsConfig,
   saveThoughtsConfig,
   createThoughtsDirectoryStructure,
+  cleanupThoughtsDirectory,
 } from './thoughts/utils/index.js'
 import { setupThoughtsDirectory, pullThoughtsFromRemote } from './thoughts/init-core.js'
 import { resolveProfileForRepo, getRepoNameFromMapping } from './thoughts/profile/utils.js'
@@ -292,6 +293,33 @@ export function worktreeCommand(program: Command): void {
         if (targetBranch === wtEntry.branch) {
           console.error(chalk.red('Error: source and target branch are the same'))
           process.exit(1)
+        }
+
+        // Clean up thoughts before checking uncommitted changes
+        const config = loadThoughtsConfig({})
+        if (config && config.repoMappings[wtResolved]) {
+          try {
+            console.log(chalk.gray('Cleaning up thoughts directory...'))
+            const result = cleanupThoughtsDirectory({
+              repoPath: wtResolved,
+              config,
+              force: options.force,
+              verbose: false, // Suppress detailed output during merge
+            })
+
+            if (result.configRemoved) {
+              saveThoughtsConfig(config, {})
+            }
+
+            if (result.thoughtsRemoved) {
+              console.log(chalk.gray('✓ Thoughts directory cleaned up'))
+            }
+          } catch (error) {
+            // Log error but don't fail the merge
+            console.log(
+              chalk.yellow(`Warning: Could not clean up thoughts: ${(error as Error).message}`),
+            )
+          }
         }
 
         if (!options.force && hasUncommittedChanges(wtEntry.worktreePath)) {

@@ -18,3 +18,7 @@ export { ensureThoughtsRepoExists, createThoughtsDirectoryStructure } from './re
 
 // Symlinks - symlink management
 export { updateSymlinksForNewUsers } from './symlinks.js'
+
+// Cleanup - thoughts directory cleanup
+export { cleanupThoughtsDirectory } from './cleanup.js'
+export type { CleanupThoughtsOptions, CleanupThoughtsResult } from './cleanup.js'
