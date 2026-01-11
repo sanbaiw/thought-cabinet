@@ -2,10 +2,10 @@ import { Command } from 'commander'
 import { agentInitCommand } from './agent/init.js'
 import { getAgentProduct } from './agent/registry.js'
 
-export function claudeCommand(program: Command): void {
-  const claude = program.command('claude').description('Manage coding agent configuration')
+export function agentCommand(program: Command): void {
+  const agent = program.command('agent').description('Manage coding agent configuration')
 
-  claude
+  agent
     .command('init')
     .description('Initialize coding agent configuration in current directory')
     .option('--force', 'Force overwrite of existing agent directory')
@@ -13,9 +13,9 @@ export function claudeCommand(program: Command): void {
     .option('--max-thinking-tokens <number>', 'Maximum thinking tokens (default: 32000)', value =>
       parseInt(value, 10),
     )
-    .option('--agent <name>', 'Agent to configure (claude|codebuddy)', 'claude')
+    .option('--name <name>', 'Agent name to configure (claude|codebuddy)', 'claude')
     .action(async options => {
-      const product = getAgentProduct(options.agent)
+      const product = getAgentProduct(options.name)
       await agentInitCommand({ ...options, product })
     })
 }

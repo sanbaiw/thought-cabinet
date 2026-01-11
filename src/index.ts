@@ -2,7 +2,7 @@
 
 import { Command } from 'commander'
 import { thoughtsCommand } from './commands/thoughts.js'
-import { claudeCommand } from './commands/claude.js'
+import { agentCommand } from './commands/agent.js'
 import { metadataCommand } from './commands/metadata.js'
 import dotenv from 'dotenv'
 
@@ -16,11 +16,11 @@ program
   .description(
     'Thought Cabinet (thc) - thoughts management CLI for developer notes and documentation',
   )
-  .version('0.0.1')
+  .version('0.0.2')
 
 // Add commands
 thoughtsCommand(program)
-claudeCommand(program)
+agentCommand(program)
 metadataCommand(program)
 
 program.parse(process.argv)
