@@ -125,12 +125,14 @@ Write structured implementation plans to `thoughts/shared/plans/YYYY-MM-DD-descr
 Always separate into two categories:
 
 **Automated Verification** (commands agents can run):
+
 - Build/compile commands
 - Test suites
 - Type checking
 - Linting
 
 **Manual Verification** (requires human):
+
 - UI/UX functionality
 - Performance under real conditions
 - User acceptance criteria
@@ -138,6 +140,7 @@ Always separate into two categories:
 ## Common Patterns
 
 ### Database Changes:
+
 1. Schema/migration
 2. Store methods
 3. Business logic
@@ -145,12 +148,14 @@ Always separate into two categories:
 5. Client updates
 
 ### New Features:
+
 1. Data model
 2. Backend logic
 3. API endpoints
 4. UI implementation
 
 ### Refactoring:
+
 1. Document current behavior
 2. Plan incremental changes
 3. Maintain backwards compatibility

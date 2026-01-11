@@ -80,7 +80,7 @@ Then wait for the user's research query.
    - Highlight patterns, connections, and architectural decisions
    - Answer the user's specific questions with concrete evidence
 
-6. **Generate research document:**
+5. **Generate research document:**
    - Use the **generating-research-document** skill to generate a research document or handle follow-up questions
 
 ## Important notes:
@@ -105,4 +105,3 @@ Then wait for the user's research query.
   - ALWAYS wait for all sub-agents to complete before synthesizing (step 4)
   - ALWAYS gather metadata before writing the document (step 5 before step 6)
   - NEVER write the research document with placeholder values
-
