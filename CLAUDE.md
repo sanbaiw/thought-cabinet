@@ -70,6 +70,34 @@ When initialized in a repo, creates `thoughts/` with symlinks:
 - `global/` → Cross-repository thoughts (symlinked)
 - `searchable/` → Hard links for search tools
 
+## Hook System
+
+### Architecture
+
+- Hook types: `src/hooks/types.ts`
+- Hook loader: `src/hooks/loader.ts`
+- Hook executor: `src/hooks/executor.ts`
+- Configuration: `.thc/hooks.json` at repo root
+
+### Hook Events
+
+- **Worktree**: PreWorktreeAdd, PostWorktreeAdd, PreWorktreeMerge, PostWorktreeMerge
+- **Thoughts**: PostThoughtsInit, PostThoughtsDestroy, PostThoughtsSync
+
+### Integration Points
+
+- `src/commands/worktree.ts` - Worktree hooks
+- `src/commands/thoughts/init.ts` - Init hooks
+- `src/commands/thoughts/destroy.ts` - Destroy hooks
+- `src/commands/thoughts/sync.ts` - Sync hooks
+
+### Testing Hooks
+
+1. Create `.thc/hooks.json` with test hook
+2. Run command that triggers hook
+3. Verify hook execution in output
+4. Check environment variables passed correctly
+
 ## TypeScript Configuration
 
 - ESM modules (`"type": "module"`)

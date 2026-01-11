@@ -104,6 +104,30 @@ Edit configuration:
 thoughtcabinet config --edit
 ```
 
+## Hooks
+
+Thought Cabinet supports hooks that execute custom commands when events occur. Configure hooks in `.thc/hooks.json`:
+
+```json
+{
+  "hooks": {
+    "PostWorktreeAdd": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "npm install",
+            "timeout": 300
+          }
+        ]
+      }
+    ]
+  }
+}
+```
+
+See [docs/HOOKS.md](docs/HOOKS.md) for complete documentation.
+
 ## Git Hooks
 
 Thought Cabinet installs two git hooks:
