@@ -4,6 +4,7 @@ import { thoughtsDestoryCommand } from './thoughts/destroy.js'
 import { thoughtsSyncCommand } from './thoughts/sync.js'
 import { thoughtsStatusCommand } from './thoughts/status.js'
 import { thoughtsConfigCommand } from './thoughts/config.js'
+import { thoughtsPruneCommand } from './thoughts/prune.js'
 import { profileCreateCommand } from './thoughts/profile/create.js'
 import { profileListCommand } from './thoughts/profile/list.js'
 import { profileShowCommand } from './thoughts/profile/show.js'
@@ -51,6 +52,13 @@ export function thoughtsCommand(program: Command): void {
     .option('--json', 'Output configuration as JSON')
     .option('--config-file <path>', 'Path to config file')
     .action(thoughtsConfigCommand)
+
+  cmd
+    .command('prune')
+    .description('Remove stale repository mappings (directories that no longer exist)')
+    .option('--apply', 'Apply changes (default is dry-run)')
+    .option('--config-file <path>', 'Path to config file')
+    .action(thoughtsPruneCommand)
 
   // Profile management commands
   const profile = cmd.command('profile').description('Manage thoughts profiles')
