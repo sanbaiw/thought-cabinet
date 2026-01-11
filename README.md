@@ -26,7 +26,7 @@ npm install -g thought-cabinet
 
 ```bash
 cd your-project
-thought-cabinet init
+thoughtcabinet init
 ```
 
 This will:
@@ -39,13 +39,13 @@ This will:
 ### Sync thoughts manually
 
 ```bash
-thought-cabinet sync
+thoughtcabinet sync
 ```
 
 ### Check status
 
 ```bash
-thought-cabinet status
+thoughtcabinet status
 ```
 
 ## Directory Structure
@@ -67,25 +67,25 @@ your-project/
 
 ### Basic Commands
 
-- `thought-cabinet init` - Initialize thoughts for current repository
-- `thought-cabinet sync` - Manually sync thoughts to repository
-- `thought-cabinet status` - Show status of thoughts repository
-- `thought-cabinet config` - View or edit configuration
-- `thought-cabinet destroy` - Remove thoughts setup from current repository
+- `thoughtcabinet init` - Initialize thoughts for current repository
+- `thoughtcabinet sync` - Manually sync thoughts to repository
+- `thoughtcabinet status` - Show status of thoughts repository
+- `thoughtcabinet config` - View or edit configuration
+- `thoughtcabinet destroy` - Remove thoughts setup from current repository
 
 ### Profile Commands
 
 Profiles allow you to use different thoughts repositories for different contexts:
 
-- `thought-cabinet profile create <name>` - Create a new profile
-- `thought-cabinet profile list` - List all profiles
-- `thought-cabinet profile show <name>` - Show profile details
-- `thought-cabinet profile delete <name>` - Delete a profile
+- `thoughtcabinet profile create <name>` - Create a new profile
+- `thoughtcabinet profile list` - List all profiles
+- `thoughtcabinet profile show <name>` - Show profile details
+- `thoughtcabinet profile delete <name>` - Delete a profile
 
 Use a profile with:
 
 ```bash
-thought-cabinet init --profile work
+thoughtcabinet init --profile work
 ```
 
 ## Configuration
@@ -95,13 +95,13 @@ Configuration is stored in `~/.config/thought-cabinet/config.json`.
 View configuration:
 
 ```bash
-thought-cabinet config
+thoughtcabinet config
 ```
 
 Edit configuration:
 
 ```bash
-thought-cabinet config --edit
+thoughtcabinet config --edit
 ```
 
 ## Git Hooks
@@ -128,7 +128,7 @@ grep -r "TODO" thoughts/searchable/
 2. Use `shared/` for team documentation that should be version-controlled
 3. Use `global/yourusername/` for cross-repository personal notes
 4. Use `global/shared/` for cross-repository team documentation
-5. Run `thought-cabinet sync` before sharing important updates
+5. Run `thoughtcabinet sync` before sharing important updates
 6. Never commit the `thoughts/` directory to your code repository
 
 ## Migration from hlyr
@@ -137,7 +137,7 @@ If you're migrating from the hlyr thoughts system:
 
 1. The configuration format is compatible
 2. Your existing thoughts repository will work as-is
-3. Run `thought-cabinet init` in your repositories
+3. Run `thoughtcabinet init` in your repositories
 4. Old git hooks will be automatically updated
 
 ## License
