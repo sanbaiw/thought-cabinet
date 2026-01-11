@@ -25,11 +25,21 @@ import {
   tmuxKillSession,
 } from '../tmux.js'
 
+import { copyAgentConfigDirs } from '../agent-config.js'
+import {
+  loadThoughtsConfig,
+  saveThoughtsConfig,
+  createThoughtsDirectoryStructure,
+} from './thoughts/utils/index.js'
+import { setupThoughtsDirectory, pullThoughtsFromRemote } from './thoughts/init-core.js'
+import { resolveProfileForRepo, getRepoNameFromMapping } from './thoughts/profile/utils.js'
+
 interface WorktreeAddOptions {
   branch?: string
   base: string
   path?: string
   detached?: boolean
+  thoughts?: boolean
 }
 
 interface WorktreeListOptions {
@@ -53,6 +63,7 @@ export function worktreeCommand(program: Command): void {
     .option('--base <ref>', 'Base ref/commit (default: HEAD)', 'HEAD')
     .option('--path <path>', 'Worktree directory path (default: ../<repo>__worktrees/<name>)')
     .option('--detached', 'Create a detached worktree at <base> (no branch)')
+    .option('--no-thoughts', 'Skip thoughts initialization')
     .action(async (name: string, options: WorktreeAddOptions) => {
       try {
         validateWorktreeHandle(name)
@@ -90,7 +101,60 @@ export function worktreeCommand(program: Command): void {
 
         tmuxNewSession(sessionName, worktreePath)
 
-        console.log(chalk.green('✓ Worktree created'))
+        // Copy agent configuration directories (always)
+        const configResult = copyAgentConfigDirs({
+          sourceDir: mainRoot,
+          targetDir: worktreePath,
+        })
+        if (configResult.copied.length > 0) {
+          console.log(chalk.gray(`Copied config: ${configResult.copied.join(', ')}`))
+        }
+
+        // Initialize thoughts (unless --no-thoughts is specified)
+        if (options.thoughts !== false) {
+          const config = loadThoughtsConfig({})
+          if (config) {
+            const mainRepoMapping = config.repoMappings[mainRoot]
+            const mappedName = getRepoNameFromMapping(mainRepoMapping)
+
+            if (mappedName) {
+              // Add repo mapping for new worktree
+              config.repoMappings[worktreePath] = mainRepoMapping
+              saveThoughtsConfig(config, {})
+
+              const profileConfig = resolveProfileForRepo(config, worktreePath)
+
+              // Ensure the thoughts directory structure exists in thoughts repo
+              createThoughtsDirectoryStructure(profileConfig, mappedName, config.user)
+
+              // Set up thoughts directory
+              const result = setupThoughtsDirectory({
+                repoPath: worktreePath,
+                profileConfig,
+                mappedName,
+                user: config.user,
+                createSearchable: true,
+                setupHooks: true,
+              })
+
+              console.log(chalk.gray('Thoughts initialized'))
+              if (result.hooksUpdated.length > 0) {
+                console.log(chalk.gray(`Updated git hooks: ${result.hooksUpdated.join(', ')}`))
+              }
+
+              // Sync thoughts from remote
+              if (pullThoughtsFromRemote(profileConfig.thoughtsRepo)) {
+                console.log(chalk.gray('Pulled latest thoughts from remote'))
+              }
+            } else {
+              console.log(chalk.yellow('Main repo not configured for thoughts, skipping'))
+            }
+          } else {
+            console.log(chalk.yellow('Thoughts not configured globally, skipping'))
+          }
+        }
+
+        console.log(chalk.green('\n✓ Worktree created'))
         console.log(chalk.gray(`Path: ${worktreePath}`))
         console.log(chalk.gray(`Tmux session: ${sessionName}`))
         console.log(chalk.gray(`Attach: tmux attach -t ${sessionName}`))

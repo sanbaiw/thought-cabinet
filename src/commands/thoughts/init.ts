@@ -20,12 +20,8 @@ import {
 } from './utils/index.js'
 import { validateProfile, resolveProfileForRepo, getRepoNameFromMapping, getProfileNameFromMapping } from './profile/utils.js'
 import { RepoMappingObject } from '../../config.js'
-import {
-  generateClaudeMd,
-  generatePreCommitHook,
-  generatePostCommitHook,
-  HOOK_VERSION,
-} from '../../templates/index.js'
+import { generateClaudeMd } from '../../templates/index.js'
+import { setupGitHooks, pullThoughtsFromRemote } from './init-core.js'
 
 interface InitOptions {
   force?: boolean
@@ -81,98 +77,6 @@ function checkExistingSetup(config?: ThoughtsConfig | null): {
   }
 
   return { exists: true, isValid: true }
-}
-
-function setupGitHooks(repoPath: string): { updated: string[] } {
-  const updated: string[] = []
-  // Use git rev-parse to find the common git directory for hooks (handles worktrees)
-  // In worktrees, hooks are stored in the common git directory, not the worktree-specific one
-  let gitCommonDir: string
-  try {
-    gitCommonDir = execSync('git rev-parse --git-common-dir', {
-      cwd: repoPath,
-      encoding: 'utf8',
-      stdio: 'pipe',
-    }).trim()
-
-    // If the path is relative, make it absolute
-    if (!path.isAbsolute(gitCommonDir)) {
-      gitCommonDir = path.join(repoPath, gitCommonDir)
-    }
-  } catch (error) {
-    throw new Error(`Failed to find git common directory: ${error}`)
-  }
-
-  const hooksDir = path.join(gitCommonDir, 'hooks')
-
-  // Ensure hooks directory exists (might not exist in some setups)
-  if (!fs.existsSync(hooksDir)) {
-    fs.mkdirSync(hooksDir, { recursive: true })
-  }
-
-  // Pre-commit hook
-  const preCommitPath = path.join(hooksDir, 'pre-commit')
-  const preCommitContent = generatePreCommitHook({ hookPath: preCommitPath })
-
-  // Post-commit hook
-  const postCommitPath = path.join(hooksDir, 'post-commit')
-  const postCommitContent = generatePostCommitHook({ hookPath: postCommitPath })
-
-  // Helper to check if hook needs updating
-  const hookNeedsUpdate = (hookPath: string): boolean => {
-    if (!fs.existsSync(hookPath)) return true
-    const content = fs.readFileSync(hookPath, 'utf8')
-    if (!content.includes('ThoughtCabinet thoughts')) return false // Not our hook
-
-    // Check version
-    const versionMatch = content.match(/# Version: (\d+)/)
-    if (!versionMatch) return true // Old hook without version
-
-    const currentVersion = parseInt(versionMatch[1])
-    return currentVersion < parseInt(HOOK_VERSION)
-  }
-
-  // Backup existing hooks if they exist and aren't ours (or need updating)
-  if (fs.existsSync(preCommitPath)) {
-    const content = fs.readFileSync(preCommitPath, 'utf8')
-    if (!content.includes('ThoughtCabinet thoughts') || hookNeedsUpdate(preCommitPath)) {
-      // Only backup non-ThoughtCabinet hooks to prevent recursion
-      if (!content.includes('ThoughtCabinet thoughts')) {
-        fs.renameSync(preCommitPath, `${preCommitPath}.old`)
-      } else {
-        // For outdated ThoughtCabinet hooks, just remove them
-        fs.unlinkSync(preCommitPath)
-      }
-    }
-  }
-
-  if (fs.existsSync(postCommitPath)) {
-    const content = fs.readFileSync(postCommitPath, 'utf8')
-    if (!content.includes('ThoughtCabinet thoughts') || hookNeedsUpdate(postCommitPath)) {
-      // Only backup non-ThoughtCabinet hooks to prevent recursion
-      if (!content.includes('ThoughtCabinet thoughts')) {
-        fs.renameSync(postCommitPath, `${postCommitPath}.old`)
-      } else {
-        // For outdated ThoughtCabinet hooks, just remove them
-        fs.unlinkSync(postCommitPath)
-      }
-    }
-  }
-
-  // Write new hooks only if needed
-  if (!fs.existsSync(preCommitPath) || hookNeedsUpdate(preCommitPath)) {
-    fs.writeFileSync(preCommitPath, preCommitContent)
-    fs.chmodSync(preCommitPath, '755')
-    updated.push('pre-commit')
-  }
-
-  if (!fs.existsSync(postCommitPath) || hookNeedsUpdate(postCommitPath)) {
-    fs.writeFileSync(postCommitPath, postCommitContent)
-    fs.chmodSync(postCommitPath, '755')
-    updated.push('post-commit')
-  }
-
-  return { updated }
 }
 
 export async function thoughtsInitCommand(options: InitOptions): Promise<void> {
@@ -629,20 +533,8 @@ export async function thoughtsInitCommand(options: InitOptions): Promise<void> {
     }
 
     // Pull latest thoughts if remote exists
-    try {
-      execSync('git remote get-url origin', { cwd: expandedRepo, stdio: 'pipe' })
-      // Remote exists, try to pull
-      try {
-        execSync('git pull --rebase', {
-          stdio: 'pipe',
-          cwd: expandedRepo,
-        })
-        p.log.success('Pulled latest thoughts from remote')
-      } catch (error) {
-        p.log.warn(`Could not pull latest thoughts: ${(error as Error).message}`)
-      }
-    } catch {
-      // No remote configured, skip pull
+    if (pullThoughtsFromRemote(expandedRepo)) {
+      p.log.success('Pulled latest thoughts from remote')
     }
 
     // Generate CLAUDE.md
