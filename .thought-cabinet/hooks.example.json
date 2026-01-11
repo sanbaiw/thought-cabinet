@@ -1,0 +1,34 @@
+{
+  "hooks": {
+    "PostWorktreeAdd": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "echo 'Worktree @ $THC_WORKTREE_PATH successfully added'"
+          }
+        ]
+      }
+    ],
+    "PostWorktreeMerge": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "echo 'Worktree merged successfully'"
+          }
+        ]
+      }
+    ],
+    "PostThoughtsSync": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "echo 'Thoughts synced at $(date)' >> .thought-cabinet/sync.log"
+          }
+        ]
+      }
+    ]
+  }
+}

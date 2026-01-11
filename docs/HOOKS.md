@@ -4,7 +4,7 @@ Thought Cabinet supports hooks that execute custom commands when specific events
 
 ## Configuration
 
-Hooks are configured in `.thc/hooks.json` at the repository root:
+Hooks are configured in `.thought-cabinet/hooks.json` at the repository root:
 
 ```json
 {
@@ -181,7 +181,7 @@ Hooks communicate status through exit codes:
 
 ### Custom script with hook input
 
-Create `.thc/scripts/post-add.sh`:
+Create `.thought-cabinet/scripts/post-add.sh`:
 
 ```bash
 #!/bin/bash
@@ -212,7 +212,7 @@ Configure hook:
         "hooks": [
           {
             "type": "command",
-            "command": ".thc/scripts/post-add.sh"
+            "command": ".thought-cabinet/scripts/post-add.sh"
           }
         ]
       }

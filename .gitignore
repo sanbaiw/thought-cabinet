@@ -32,3 +32,6 @@ npm-debug.log*
 
 # CodeBuddy Code local settings
 .codebuddy/settings.local.json
+
+# Thought Cabinet
+.thought-cabinet/hooks.json
