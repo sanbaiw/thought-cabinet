@@ -574,13 +574,13 @@ export async function thoughtsInitCommand(options: InitOptions): Promise<void> {
     )
 
     // Execute PostThoughtsInit hooks
-    const hooksConfig = loadHooksConfig(repoPath)
+    const hooksConfig = loadHooksConfig(currentRepo)
     const postInitHooks = getHooksForEvent(hooksConfig, 'PostThoughtsInit')
 
     if (postInitHooks.length > 0) {
       const hookInput = {
         hook_event_name: 'PostThoughtsInit' as const,
-        cwd: repoPath,
+        cwd: currentRepo,
         thoughts_repo: profileConfig.thoughtsRepo,
         repos_dir: profileConfig.reposDir,
         global_dir: profileConfig.globalDir,
