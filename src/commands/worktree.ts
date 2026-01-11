@@ -34,6 +34,7 @@ import {
 } from './thoughts/utils/index.js'
 import { setupThoughtsDirectory, pullThoughtsFromRemote } from './thoughts/init-core.js'
 import { resolveProfileForRepo, getRepoNameFromMapping } from './thoughts/profile/utils.js'
+import { loadHooksConfig, getHooksForEvent, executeHooks } from '../hooks/index.js'
 
 interface WorktreeAddOptions {
   branch?: string
@@ -86,6 +87,36 @@ export function worktreeCommand(program: Command): void {
         if (existing) {
           console.error(chalk.red(`Error: tmux session already exists: ${existing}`))
           process.exit(1)
+        }
+
+        // Execute PreWorktreeAdd hooks
+        const hooksConfig = loadHooksConfig(mainRoot)
+        const preAddHooks = getHooksForEvent(hooksConfig, 'PreWorktreeAdd')
+
+        if (preAddHooks.length > 0) {
+          const hookInput = {
+            hook_event_name: 'PreWorktreeAdd' as const,
+            cwd: mainRoot,
+            worktree_path: worktreePath,
+            worktree_name: name,
+            worktree_branch: options.detached
+              ? ''
+              : ((options.branch as string | undefined) ?? name),
+            main_root: mainRoot,
+            session_name: sessionName,
+            base_ref: options.base,
+          }
+
+          const hookEnv = {
+            THC_WORKTREE_PATH: worktreePath,
+            THC_WORKTREE_NAME: name,
+            THC_WORKTREE_BRANCH: hookInput.worktree_branch,
+            THC_MAIN_ROOT: mainRoot,
+            THC_SESSION_NAME: sessionName,
+            THC_BASE_REF: options.base,
+          }
+
+          await executeHooks(preAddHooks, hookInput, hookEnv, true)
         }
 
         if (options.detached) {
@@ -153,6 +184,33 @@ export function worktreeCommand(program: Command): void {
           } else {
             console.log(chalk.yellow('Thoughts not configured globally, skipping'))
           }
+        }
+
+        // Execute PostWorktreeAdd hooks
+        const postAddHooks = getHooksForEvent(hooksConfig, 'PostWorktreeAdd')
+
+        if (postAddHooks.length > 0) {
+          const hookInput = {
+            hook_event_name: 'PostWorktreeAdd' as const,
+            cwd: worktreePath,
+            worktree_path: worktreePath,
+            worktree_name: name,
+            worktree_branch: options.detached
+              ? ''
+              : ((options.branch as string | undefined) ?? name),
+            main_root: mainRoot,
+            session_name: sessionName,
+          }
+
+          const hookEnv = {
+            THC_WORKTREE_PATH: worktreePath,
+            THC_WORKTREE_NAME: name,
+            THC_WORKTREE_BRANCH: hookInput.worktree_branch,
+            THC_MAIN_ROOT: mainRoot,
+            THC_SESSION_NAME: sessionName,
+          }
+
+          await executeHooks(postAddHooks, hookInput, hookEnv, true)
         }
 
         console.log(chalk.green('\n✓ Worktree created'))
@@ -295,6 +353,32 @@ export function worktreeCommand(program: Command): void {
           process.exit(1)
         }
 
+        // Execute PreWorktreeMerge hooks
+        const mergeHooksConfig = loadHooksConfig(mainRoot)
+        const preMergeHooks = getHooksForEvent(mergeHooksConfig, 'PreWorktreeMerge')
+
+        if (preMergeHooks.length > 0) {
+          const hookInput = {
+            hook_event_name: 'PreWorktreeMerge' as const,
+            cwd: mainRoot,
+            worktree_path: wtResolved,
+            worktree_name: name,
+            worktree_branch: wtEntry.branch,
+            target_branch: targetBranch,
+            main_root: mainRoot,
+          }
+
+          const hookEnv = {
+            THC_WORKTREE_PATH: wtResolved,
+            THC_WORKTREE_NAME: name,
+            THC_WORKTREE_BRANCH: wtEntry.branch,
+            THC_TARGET_BRANCH: targetBranch,
+            THC_MAIN_ROOT: mainRoot,
+          }
+
+          await executeHooks(preMergeHooks, hookInput, hookEnv, true)
+        }
+
         // Clean up thoughts before checking uncommitted changes
         const config = loadThoughtsConfig({})
         if (config && config.repoMappings[wtResolved]) {
@@ -377,6 +461,37 @@ export function worktreeCommand(program: Command): void {
               )
             }
           }
+        }
+
+        // Execute PostWorktreeMerge hooks
+        const postMergeHooks = getHooksForEvent(mergeHooksConfig, 'PostWorktreeMerge')
+
+        if (postMergeHooks.length > 0) {
+          const hookInput = {
+            hook_event_name: 'PostWorktreeMerge' as const,
+            cwd: mainRoot,
+            worktree_path: wtResolved,
+            worktree_name: name,
+            worktree_branch: wtEntry.branch,
+            target_branch: targetBranch,
+            main_root: mainRoot,
+            kept_session: options.keepSession || false,
+            kept_worktree: options.keepWorktree || false,
+            kept_branch: options.keepBranch || false,
+          }
+
+          const hookEnv = {
+            THC_WORKTREE_PATH: wtResolved,
+            THC_WORKTREE_NAME: name,
+            THC_WORKTREE_BRANCH: wtEntry.branch,
+            THC_TARGET_BRANCH: targetBranch,
+            THC_MAIN_ROOT: mainRoot,
+            THC_KEPT_SESSION: options.keepSession ? 'true' : 'false',
+            THC_KEPT_WORKTREE: options.keepWorktree ? 'true' : 'false',
+            THC_KEPT_BRANCH: options.keepBranch ? 'true' : 'false',
+          }
+
+          await executeHooks(postMergeHooks, hookInput, hookEnv, true)
         }
 
         console.log(chalk.green('✓ Merged and cleaned up'))

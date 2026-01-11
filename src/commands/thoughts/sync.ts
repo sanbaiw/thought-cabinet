@@ -10,6 +10,7 @@ import {
 } from './utils/index.js'
 import { resolveProfileForRepo, getRepoNameFromMapping } from './profile/utils.js'
 import { createSearchableIndex } from './init-core.js'
+import { loadHooksConfig, getHooksForEvent, executeHooks } from '../../hooks/index.js'
 
 interface SyncOptions {
   message?: string
@@ -143,6 +144,28 @@ export async function thoughtsSyncCommand(options: SyncOptions): Promise<void> {
     // Sync the thoughts repository using profile's thoughtsRepo
     console.log(chalk.blue('Syncing thoughts...'))
     syncThoughts(profileConfig.thoughtsRepo, options.message || '')
+
+    // Execute PostThoughtsSync hooks
+    const hooksConfig = loadHooksConfig(currentRepo)
+    const postSyncHooks = getHooksForEvent(hooksConfig, 'PostThoughtsSync')
+
+    if (postSyncHooks.length > 0) {
+      const hookInput = {
+        hook_event_name: 'PostThoughtsSync' as const,
+        cwd: currentRepo,
+        thoughts_repo: profileConfig.thoughtsRepo,
+        has_changes: true,
+        searchable_created: true,
+      }
+
+      const hookEnv = {
+        THC_THOUGHTS_REPO: profileConfig.thoughtsRepo,
+        THC_HAS_CHANGES: 'true',
+        THC_SEARCHABLE_CREATED: 'true',
+      }
+
+      await executeHooks(postSyncHooks, hookInput, hookEnv, true)
+    }
   } catch (error) {
     console.error(chalk.red(`Error during thoughts sync: ${error}`))
     process.exit(1)
