@@ -106,7 +106,7 @@ thoughtcabinet config --edit
 
 ## Hooks
 
-Thought Cabinet supports hooks that execute custom commands when events occur. Configure hooks in `.thc/hooks.json`:
+Thought Cabinet supports hooks that execute custom commands when events occur. Configure hooks in `.thought-cabinet/hooks.json`:
 
 ```json
 {

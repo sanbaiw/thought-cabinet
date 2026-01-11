@@ -4,9 +4,14 @@ import chalk from 'chalk'
 import type { HooksConfig, HookEvent, Hook } from './types.js'
 
 /**
+ * Default hooks configuration directory name
+ */
+export const HOOKS_CONFIG_DIR = '.thought-cabinet'
+
+/**
  * Default hooks configuration file name
  */
-export const HOOKS_CONFIG_FILE = '.thc/hooks.json'
+export const HOOKS_CONFIG_FILE = `${HOOKS_CONFIG_DIR}/hooks.json`
 
 /**
  * Load hooks configuration from repository root
@@ -50,18 +55,10 @@ export function loadHooksConfig(repoPath: string): HooksConfig | null {
  * @returns Array of hooks to execute
  */
 export function getHooksForEvent(config: HooksConfig | null, event: HookEvent): Hook[] {
-  if (!config?.hooks[event]) {
+  const hookGroups = config?.hooks[event]
+  if (!hookGroups) {
     return []
   }
 
-  const hookGroups = config.hooks[event]
-  const hooks: Hook[] = []
-
-  for (const group of hookGroups) {
-    if (Array.isArray(group.hooks)) {
-      hooks.push(...group.hooks)
-    }
-  }
-
-  return hooks
+  return hookGroups.flatMap(group => group.hooks ?? [])
 }

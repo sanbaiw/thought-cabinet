@@ -77,7 +77,7 @@ When initialized in a repo, creates `thoughts/` with symlinks:
 - Hook types: `src/hooks/types.ts`
 - Hook loader: `src/hooks/loader.ts`
 - Hook executor: `src/hooks/executor.ts`
-- Configuration: `.thc/hooks.json` at repo root
+- Configuration: `.thought-cabinet/hooks.json` at repo root
 
 ### Hook Events
 
@@ -93,7 +93,7 @@ When initialized in a repo, creates `thoughts/` with symlinks:
 
 ### Testing Hooks
 
-1. Create `.thc/hooks.json` with test hook
+1. Create `.thought-cabinet/hooks.json` with test hook
 2. Run command that triggers hook
 3. Verify hook execution in output
 4. Check environment variables passed correctly
