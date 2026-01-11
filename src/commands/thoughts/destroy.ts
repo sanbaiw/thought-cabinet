@@ -1,9 +1,12 @@
 import fs from 'fs'
 import path from 'path'
-import { execSync } from 'child_process'
 import chalk from 'chalk'
-import { loadThoughtsConfig, saveThoughtsConfig, getCurrentRepoPath } from './utils/index.js'
-import { getRepoNameFromMapping, getProfileNameFromMapping } from './profile/utils.js'
+import {
+  loadThoughtsConfig,
+  saveThoughtsConfig,
+  getCurrentRepoPath,
+  cleanupThoughtsDirectory,
+} from './utils/index.js'
 
 interface DestoryOptions {
   force?: boolean
@@ -28,11 +31,9 @@ export async function thoughtsDestoryCommand(options: DestoryOptions): Promise<v
       process.exit(1)
     }
 
+    // Check if repository is in config (unless force is specified)
     const mapping = config.repoMappings[currentRepo]
-    const mappedName = getRepoNameFromMapping(mapping)
-    const profileName = getProfileNameFromMapping(mapping)
-
-    if (!mappedName && !options.force) {
+    if (!mapping && !options.force) {
       console.error(chalk.red('Error: This repository is not in the thoughts configuration.'))
       console.error(chalk.yellow('Use --force to remove the thoughts directory anyway.'))
       process.exit(1)
@@ -40,51 +41,32 @@ export async function thoughtsDestoryCommand(options: DestoryOptions): Promise<v
 
     console.log(chalk.blue('Removing thoughts setup from current repository...'))
 
-    // Step 1: Handle searchable directory if it exists
-    const searchableDir = path.join(thoughtsDir, 'searchable')
-    if (fs.existsSync(searchableDir)) {
-      console.log(chalk.gray('Removing searchable directory...'))
-      try {
-        // Reset permissions in case they're restricted
-        execSync(`chmod -R 755 "${searchableDir}"`, { stdio: 'pipe' })
-      } catch {
-        // Ignore chmod errors
-      }
-      fs.rmSync(searchableDir, { recursive: true, force: true })
-    }
+    // Use shared cleanup utility
+    const result = cleanupThoughtsDirectory({
+      repoPath: currentRepo,
+      config,
+      force: options.force,
+      verbose: true,
+    })
 
-    // Step 2: Remove the entire thoughts directory
-    // IMPORTANT: This only removes the local thoughts/ directory containing symlinks
-    // The actual thoughts content in the thoughts repository remains untouched
-    console.log(chalk.gray('Removing thoughts directory (symlinks only)...'))
-    try {
-      fs.rmSync(thoughtsDir, { recursive: true, force: true })
-    } catch (error) {
-      console.error(chalk.red(`Error removing thoughts directory: ${error}`))
-      console.error(chalk.yellow('You may need to manually remove: ' + thoughtsDir))
-      process.exit(1)
-    }
-
-    // Step 3: Remove from config if mapped
-    if (mappedName) {
-      console.log(chalk.gray('Removing repository from thoughts configuration...'))
-      delete config.repoMappings[currentRepo]
+    // Save updated config
+    if (result.configRemoved) {
       saveThoughtsConfig(config, options)
     }
 
     console.log(chalk.green('✅ Thoughts removed from repository'))
 
     // Provide info about what was done
-    if (mappedName) {
+    if (result.mappedName) {
       console.log('')
       console.log(chalk.gray('Note: Your thoughts content remains safe in:'))
 
-      if (profileName && config.profiles && config.profiles[profileName]) {
-        const profile = config.profiles[profileName]
-        console.log(chalk.gray(`  ${profile.thoughtsRepo}/${profile.reposDir}/${mappedName}`))
-        console.log(chalk.gray(`  (profile: ${profileName})`))
+      if (result.profileName && config.profiles && config.profiles[result.profileName]) {
+        const profile = config.profiles[result.profileName]
+        console.log(chalk.gray(`  ${profile.thoughtsRepo}/${profile.reposDir}/${result.mappedName}`))
+        console.log(chalk.gray(`  (profile: ${result.profileName})`))
       } else {
-        console.log(chalk.gray(`  ${config.thoughtsRepo}/${config.reposDir}/${mappedName}`))
+        console.log(chalk.gray(`  ${config.thoughtsRepo}/${config.reposDir}/${result.mappedName}`))
       }
 
       console.log(chalk.gray('Only the local symlinks and configuration were removed.'))
