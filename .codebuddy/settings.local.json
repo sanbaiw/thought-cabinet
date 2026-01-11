@@ -1,0 +1,14 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(thoughtcabinet metadata)",
+      "Bash(git rev-parse:*)",
+      "Bash(npm run build)",
+      "Bash(npm run lint)",
+      "Bash(npm run lint -- --fix)",
+      "Bash(node:*)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

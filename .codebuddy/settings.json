@@ -5,6 +5,6 @@
   "enableAllProjectMcpServers": false,
   "env": {
     "MAX_THINKING_TOKENS": "32000",
-    "CLAUDE_BASH_MAINTAIN_WORKING_DIR": "1"
+    "CODEBUDDY_BASH_MAINTAIN_WORKING_DIR": "1"
   }
 }

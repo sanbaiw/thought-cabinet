@@ -31,7 +31,7 @@ node dist/index.js <command>
 
 Entry point: `src/index.ts` - Registers three command groups:
 
-- `thoughtsCommand` - Core thoughts management (init, sync, status, config, destroy, profile)
+- `thoughtsCommand` - Core thoughts management (init, sync, status, config, destroy, profile/\*)
 - `claudeCommand` - Claude Code configuration management
 - `metadataCommand` - Repository metadata utilities
 

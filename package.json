@@ -10,6 +10,7 @@
   "files": [
     "dist/**/*",
     ".claude/**/*",
+    ".codebuddy/**/*",
     "README.md"
   ],
   "scripts": {
