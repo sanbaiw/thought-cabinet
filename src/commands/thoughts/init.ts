@@ -2,7 +2,7 @@ import fs from 'fs'
 import path from 'path'
 import { execSync } from 'child_process'
 import chalk from 'chalk'
-import readline from 'readline'
+import * as p from '@clack/prompts'
 import {
   ThoughtsConfig,
   loadThoughtsConfig,
@@ -34,20 +34,6 @@ interface InitOptions {
 
 function sanitizeDirectoryName(name: string): string {
   return name.replace(/[^a-zA-Z0-9_-]/g, '_')
-}
-
-function prompt(question: string): Promise<string> {
-  const rl = readline.createInterface({
-    input: process.stdin,
-    output: process.stdout,
-  })
-
-  return new Promise(resolve => {
-    rl.question(question, answer => {
-      rl.close()
-      resolve(answer.trim())
-    })
-  })
 }
 
 function checkExistingSetup(config?: ThoughtsConfig | null): {
@@ -93,25 +79,6 @@ function checkExistingSetup(config?: ThoughtsConfig | null): {
   }
 
   return { exists: true, isValid: true }
-}
-
-async function selectFromList(message: string, options: string[]): Promise<number> {
-  if (message) {
-    console.log(chalk.cyan(message))
-  }
-  options.forEach((opt, idx) => {
-    console.log(`  [${idx + 1}] ${opt}`)
-  })
-
-  // eslint-disable-next-line no-constant-condition
-  while (true) {
-    const answer = await prompt('Select option: ')
-    const num = parseInt(answer)
-    if (num >= 1 && num <= options.length) {
-      return num - 1
-    }
-    console.log(chalk.red('Invalid selection. Please try again.'))
-  }
 }
 
 function setupGitHooks(repoPath: string): { updated: string[] } {
@@ -208,13 +175,20 @@ function setupGitHooks(repoPath: string): { updated: string[] } {
 
 export async function thoughtsInitCommand(options: InitOptions): Promise<void> {
   try {
+    // Check for interactive mode when needed
+    if (!options.directory && !process.stdin.isTTY) {
+      p.log.error('Not running in interactive terminal.')
+      p.log.info('Use --directory flag to specify the repository directory name.')
+      process.exit(1)
+    }
+
     const currentRepo = getCurrentRepoPath()
 
     // Check if we're in a git repository
     try {
       execSync('git rev-parse --git-dir', { stdio: 'pipe' })
     } catch {
-      console.error(chalk.red('Error: Not in a git repository'))
+      p.log.error('Not in a git repository')
       process.exit(1)
     }
 
@@ -223,45 +197,78 @@ export async function thoughtsInitCommand(options: InitOptions): Promise<void> {
 
     // If no config exists, we need to set it up first
     if (!config) {
-      console.log(chalk.blue('=== Initial Thoughts Setup ==='))
-      console.log('')
-      console.log("First, let's configure your global thoughts system.")
-      console.log('')
+      p.intro(chalk.blue('Initial Thoughts Setup'))
+
+      p.log.info("First, let's configure your global thoughts system.")
 
       // Get thoughts repository location
       const defaultRepo = getDefaultThoughtsRepo()
-      console.log(chalk.gray('This is where all your thoughts across all projects will be stored.'))
-      const thoughtsRepoInput = await prompt(`Thoughts repository location [${defaultRepo}]: `)
-      const thoughtsRepo = thoughtsRepoInput || defaultRepo
+      p.log.message(
+        chalk.gray('This is where all your thoughts across all projects will be stored.'),
+      )
+
+      const thoughtsRepoInput = await p.text({
+        message: 'Thoughts repository location:',
+        initialValue: defaultRepo,
+        placeholder: defaultRepo,
+      })
+
+      if (p.isCancel(thoughtsRepoInput)) {
+        p.cancel('Operation cancelled.')
+        process.exit(0)
+      }
+      const thoughtsRepo = (thoughtsRepoInput as string) || defaultRepo
 
       // Get directory names
-      console.log('')
-      console.log(chalk.gray('Your thoughts will be organized into two main directories:'))
-      console.log(chalk.gray('- Repository-specific thoughts (one subdirectory per project)'))
-      console.log(chalk.gray('- Global thoughts (shared across all projects)'))
-      console.log('')
+      p.log.message(chalk.gray('Your thoughts will be organized into two main directories:'))
+      p.log.message(chalk.gray('- Repository-specific thoughts (one subdirectory per project)'))
+      p.log.message(chalk.gray('- Global thoughts (shared across all projects)'))
 
-      const reposDirInput = await prompt(
-        `Directory name for repository-specific thoughts [repos]: `,
-      )
-      const reposDir = reposDirInput || 'repos'
+      const reposDirInput = await p.text({
+        message: 'Directory name for repository-specific thoughts:',
+        initialValue: 'repos',
+        placeholder: 'repos',
+      })
 
-      const globalDirInput = await prompt(`Directory name for global thoughts [global]: `)
-      const globalDir = globalDirInput || 'global'
+      if (p.isCancel(reposDirInput)) {
+        p.cancel('Operation cancelled.')
+        process.exit(0)
+      }
+      const reposDir = (reposDirInput as string) || 'repos'
+
+      const globalDirInput = await p.text({
+        message: 'Directory name for global thoughts:',
+        initialValue: 'global',
+        placeholder: 'global',
+      })
+
+      if (p.isCancel(globalDirInput)) {
+        p.cancel('Operation cancelled.')
+        process.exit(0)
+      }
+      const globalDir = (globalDirInput as string) || 'global'
 
       // Get user name
-      console.log('')
       const defaultUser = process.env.USER || 'user'
       let user = ''
       while (!user || user.toLowerCase() === 'global') {
-        const userInput = await prompt(`Your username [${defaultUser}]: `)
-        user = userInput || defaultUser
-        if (user.toLowerCase() === 'global') {
-          console.log(
-            chalk.red('Username cannot be "global" as it\'s reserved for cross-project thoughts.'),
-          )
-          user = ''
+        const userInput = await p.text({
+          message: 'Your username:',
+          initialValue: defaultUser,
+          placeholder: defaultUser,
+          validate: value => {
+            if (value.toLowerCase() === 'global') {
+              return 'Username cannot be "global" as it\'s reserved for cross-project thoughts.'
+            }
+            return undefined
+          },
+        })
+
+        if (p.isCancel(userInput)) {
+          p.cancel('Operation cancelled.')
+          process.exit(0)
         }
+        user = (userInput as string) || defaultUser
       }
 
       config = {
@@ -273,40 +280,35 @@ export async function thoughtsInitCommand(options: InitOptions): Promise<void> {
       }
 
       // Show what will be created
-      console.log('')
-      console.log(chalk.yellow('Creating thoughts structure:'))
-      console.log(`  ${chalk.cyan(thoughtsRepo)}/`)
-      console.log(
-        `    ├── ${chalk.cyan(reposDir)}/     ${chalk.gray('(project-specific thoughts)')}`,
+      p.note(
+        `${chalk.cyan(thoughtsRepo)}/\n` +
+          `  ├── ${chalk.cyan(reposDir)}/     ${chalk.gray('(project-specific thoughts)')}\n` +
+          `  └── ${chalk.cyan(globalDir)}/    ${chalk.gray('(cross-project thoughts)')}`,
+        'Creating thoughts structure',
       )
-      console.log(`    └── ${chalk.cyan(globalDir)}/    ${chalk.gray('(cross-project thoughts)')}`)
-      console.log('')
 
       // Ensure thoughts repo exists
       ensureThoughtsRepoExists(thoughtsRepo, reposDir, globalDir)
 
       // Save initial config
       saveThoughtsConfig(config, options)
-      console.log(chalk.green('✅ Global thoughts configuration created'))
-      console.log('')
+      p.log.success('Global thoughts configuration created')
     }
 
     // Validate profile if specified
     if (options.profile) {
       if (!validateProfile(config, options.profile)) {
-        console.error(chalk.red(`Error: Profile "${options.profile}" does not exist.`))
-        console.error('')
-        console.error(chalk.gray('Available profiles:'))
+        p.log.error(`Profile "${options.profile}" does not exist.`)
+        p.log.message(chalk.gray('Available profiles:'))
         if (config.profiles) {
           Object.keys(config.profiles).forEach(name => {
-            console.error(chalk.gray(`  - ${name}`))
+            p.log.message(chalk.gray(`  - ${name}`))
           })
         } else {
-          console.error(chalk.gray('  (none)'))
+          p.log.message(chalk.gray('  (none)'))
         }
-        console.error('')
-        console.error(chalk.yellow('Create a profile first:'))
-        console.error(chalk.gray(`  thoughtcabinet profile create ${options.profile}`))
+        p.log.warn('Create a profile first:')
+        p.log.message(chalk.gray(`  thoughtcabinet profile create ${options.profile}`))
         process.exit(1)
       }
     }
@@ -333,18 +335,27 @@ export async function thoughtsInitCommand(options: InitOptions): Promise<void> {
 
     if (setupStatus.exists && !options.force) {
       if (setupStatus.isValid) {
-        console.log(chalk.yellow('Thoughts directory already configured for this repository.'))
-        const reconfigure = await prompt('Do you want to reconfigure? (y/N): ')
-        if (reconfigure.toLowerCase() !== 'y') {
-          console.log('Setup cancelled.')
+        p.log.warn('Thoughts directory already configured for this repository.')
+
+        const reconfigure = await p.confirm({
+          message: 'Do you want to reconfigure?',
+          initialValue: false,
+        })
+
+        if (p.isCancel(reconfigure) || !reconfigure) {
+          p.cancel('Setup cancelled.')
           return
         }
       } else {
-        console.log(chalk.yellow(`⚠️  ${setupStatus.message || 'Thoughts setup is incomplete'}`))
+        p.log.warn(setupStatus.message || 'Thoughts setup is incomplete')
 
-        const fix = await prompt('Do you want to fix the setup? (Y/n): ')
-        if (fix.toLowerCase() === 'n') {
-          console.log('Setup cancelled.')
+        const fix = await p.confirm({
+          message: 'Do you want to fix the setup?',
+          initialValue: true,
+        })
+
+        if (p.isCancel(fix) || !fix) {
+          p.cancel('Setup cancelled.')
           return
         }
       }
@@ -353,13 +364,16 @@ export async function thoughtsInitCommand(options: InitOptions): Promise<void> {
     // Ensure thoughts repo still exists (might have been deleted)
     const expandedRepo = expandPath(tempProfileConfig.thoughtsRepo)
     if (!fs.existsSync(expandedRepo)) {
-      console.log(
-        chalk.red(`Error: Thoughts repository not found at ${tempProfileConfig.thoughtsRepo}`),
-      )
-      console.log(chalk.yellow('The thoughts repository may have been moved or deleted.'))
-      const recreate = await prompt('Do you want to recreate it? (Y/n): ')
-      if (recreate.toLowerCase() === 'n') {
-        console.log('Please update your configuration or restore the thoughts repository.')
+      p.log.error(`Thoughts repository not found at ${tempProfileConfig.thoughtsRepo}`)
+      p.log.warn('The thoughts repository may have been moved or deleted.')
+
+      const recreate = await p.confirm({
+        message: 'Do you want to recreate it?',
+        initialValue: true,
+      })
+
+      if (p.isCancel(recreate) || !recreate) {
+        p.log.info('Please update your configuration or restore the thoughts repository.')
         process.exit(1)
       }
       ensureThoughtsRepoExists(
@@ -393,100 +407,106 @@ export async function thoughtsInitCommand(options: InitOptions): Promise<void> {
         const sanitizedDir = sanitizeDirectoryName(options.directory)
 
         if (!existingRepos.includes(sanitizedDir)) {
-          console.error(
-            chalk.red(`Error: Directory "${sanitizedDir}" not found in thoughts repository.`),
-          )
-          console.error(
-            chalk.red('In non-interactive mode (--directory), you must specify a directory'),
-          )
-          console.error(chalk.red('name that already exists in the thoughts repository.'))
-          console.error('')
-          console.error(chalk.yellow('Available directories:'))
-          existingRepos.forEach(repo => console.error(chalk.gray(`  - ${repo}`)))
+          p.log.error(`Directory "${sanitizedDir}" not found in thoughts repository.`)
+          p.log.error('In non-interactive mode (--directory), you must specify a directory')
+          p.log.error('name that already exists in the thoughts repository.')
+          p.log.warn('Available directories:')
+          existingRepos.forEach(repo => p.log.message(chalk.gray(`  - ${repo}`)))
           process.exit(1)
         }
 
         mappedName = sanitizedDir
-        console.log(
-          chalk.green(
-            `✓ Using existing: ${tempProfileConfig.thoughtsRepo}/${tempProfileConfig.reposDir}/${mappedName}`,
-          ),
+        p.log.success(
+          `Using existing: ${tempProfileConfig.thoughtsRepo}/${tempProfileConfig.reposDir}/${mappedName}`,
         )
       } else {
         // Interactive mode
-        console.log(chalk.blue('=== Repository Setup ==='))
-        console.log('')
-        console.log(`Setting up thoughts for: ${chalk.cyan(currentRepo)}`)
-        console.log('')
-        console.log(
+        p.intro(chalk.blue('Repository Setup'))
+
+        p.log.info(`Setting up thoughts for: ${chalk.cyan(currentRepo)}`)
+        p.log.message(
           chalk.gray(
             `This will create a subdirectory in ${tempProfileConfig.thoughtsRepo}/${tempProfileConfig.reposDir}/`,
           ),
         )
-        console.log(chalk.gray('to store thoughts specific to this repository.'))
-        console.log('')
+        p.log.message(chalk.gray('to store thoughts specific to this repository.'))
 
         if (existingRepos.length > 0) {
-          console.log('Select or create a thoughts directory for this repository:')
-          const options = [
-            ...existingRepos.map(repo => `Use existing: ${repo}`),
-            '→ Create new directory',
+          const selectOptions = [
+            ...existingRepos.map(repo => ({ value: repo, label: `Use existing: ${repo}` })),
+            { value: '__create_new__', label: 'Create new directory' },
           ]
-          const selection = await selectFromList('', options)
 
-          if (selection === options.length - 1) {
+          const selection = await p.select({
+            message: 'Select or create a thoughts directory for this repository:',
+            options: selectOptions,
+          })
+
+          if (p.isCancel(selection)) {
+            p.cancel('Operation cancelled.')
+            process.exit(0)
+          }
+
+          if (selection === '__create_new__') {
             // Create new
             const defaultName = getRepoNameFromPath(currentRepo)
-            console.log('')
-            console.log(
+            p.log.message(
               chalk.gray(
                 `This name will be used for the directory: ${tempProfileConfig.thoughtsRepo}/${tempProfileConfig.reposDir}/[name]`,
               ),
             )
-            const nameInput = await prompt(
-              `Directory name for this project's thoughts [${defaultName}]: `,
-            )
-            mappedName = nameInput || defaultName
+
+            const nameInput = await p.text({
+              message: "Directory name for this project's thoughts:",
+              initialValue: defaultName,
+              placeholder: defaultName,
+            })
+
+            if (p.isCancel(nameInput)) {
+              p.cancel('Operation cancelled.')
+              process.exit(0)
+            }
+            mappedName = (nameInput as string) || defaultName
 
             // Sanitize the name
             mappedName = sanitizeDirectoryName(mappedName)
-            console.log(
-              chalk.green(
-                `✓ Will create: ${tempProfileConfig.thoughtsRepo}/${tempProfileConfig.reposDir}/${mappedName}`,
-              ),
+            p.log.success(
+              `Will create: ${tempProfileConfig.thoughtsRepo}/${tempProfileConfig.reposDir}/${mappedName}`,
             )
           } else {
-            mappedName = existingRepos[selection]
-            console.log(
-              chalk.green(
-                `✓ Will use existing: ${tempProfileConfig.thoughtsRepo}/${tempProfileConfig.reposDir}/${mappedName}`,
-              ),
+            mappedName = selection as string
+            p.log.success(
+              `Will use existing: ${tempProfileConfig.thoughtsRepo}/${tempProfileConfig.reposDir}/${mappedName}`,
             )
           }
         } else {
           // No existing repos, just create new
           const defaultName = getRepoNameFromPath(currentRepo)
-          console.log(
+          p.log.message(
             chalk.gray(
               `This name will be used for the directory: ${tempProfileConfig.thoughtsRepo}/${tempProfileConfig.reposDir}/[name]`,
             ),
           )
-          const nameInput = await prompt(
-            `Directory name for this project's thoughts [${defaultName}]: `,
-          )
-          mappedName = nameInput || defaultName
+
+          const nameInput = await p.text({
+            message: "Directory name for this project's thoughts:",
+            initialValue: defaultName,
+            placeholder: defaultName,
+          })
+
+          if (p.isCancel(nameInput)) {
+            p.cancel('Operation cancelled.')
+            process.exit(0)
+          }
+          mappedName = (nameInput as string) || defaultName
 
           // Sanitize the name
           mappedName = sanitizeDirectoryName(mappedName)
-          console.log(
-            chalk.green(
-              `✓ Will create: ${tempProfileConfig.thoughtsRepo}/${tempProfileConfig.reposDir}/${mappedName}`,
-            ),
+          p.log.success(
+            `Will create: ${tempProfileConfig.thoughtsRepo}/${tempProfileConfig.reposDir}/${mappedName}`,
           )
         }
       }
-
-      console.log('')
 
       // Update config with profile-aware mapping
       if (options.profile) {
@@ -549,7 +569,7 @@ export async function thoughtsInitCommand(options: InitOptions): Promise<void> {
     )
 
     if (otherUsers.length > 0) {
-      console.log(chalk.green(`✓ Added symlinks for other users: ${otherUsers.join(', ')}`))
+      p.log.success(`Added symlinks for other users: ${otherUsers.join(', ')}`)
     }
 
     // Pull latest thoughts if remote exists
@@ -561,9 +581,9 @@ export async function thoughtsInitCommand(options: InitOptions): Promise<void> {
           stdio: 'pipe',
           cwd: expandedRepo,
         })
-        console.log(chalk.green('✓ Pulled latest thoughts from remote'))
+        p.log.success('Pulled latest thoughts from remote')
       } catch (error) {
-        console.warn(chalk.yellow('Warning: Could not pull latest thoughts:'), error.message)
+        p.log.warn(`Could not pull latest thoughts: ${(error as Error).message}`)
       }
     } catch {
       // No remote configured, skip pull
@@ -581,41 +601,42 @@ export async function thoughtsInitCommand(options: InitOptions): Promise<void> {
     // Setup git hooks
     const hookResult = setupGitHooks(currentRepo)
     if (hookResult.updated.length > 0) {
-      console.log(chalk.yellow(`✓ Updated git hooks: ${hookResult.updated.join(', ')}`))
+      p.log.step(`Updated git hooks: ${hookResult.updated.join(', ')}`)
     }
 
-    console.log(chalk.green('✅ Thoughts setup complete!'))
-    console.log('')
-    console.log(chalk.blue('=== Summary ==='))
-    console.log('')
-    console.log('Repository structure created:')
-    console.log(`  ${chalk.cyan(currentRepo)}/`)
-    console.log(`    └── thoughts/`)
-    console.log(
-      `         ├── ${config.user}/     ${chalk.gray(`→ ${profileConfig.thoughtsRepo}/${profileConfig.reposDir}/${mappedName}/${config.user}/`)}`,
+    p.log.success('Thoughts setup complete!')
+
+    // Summary note
+    const structureText =
+      `${chalk.cyan(currentRepo)}/\n` +
+      `  └── thoughts/\n` +
+      `       ├── ${config.user}/     ${chalk.gray(`→ ${profileConfig.thoughtsRepo}/${profileConfig.reposDir}/${mappedName}/${config.user}/`)}\n` +
+      `       ├── shared/      ${chalk.gray(`→ ${profileConfig.thoughtsRepo}/${profileConfig.reposDir}/${mappedName}/shared/`)}\n` +
+      `       └── global/      ${chalk.gray(`→ ${profileConfig.thoughtsRepo}/${profileConfig.globalDir}/`)}\n` +
+      `           ├── ${config.user}/     ${chalk.gray('(your cross-repo notes)')}\n` +
+      `           └── shared/  ${chalk.gray('(team cross-repo notes)')}`
+
+    p.note(structureText, 'Repository structure created')
+
+    p.note(
+      `${chalk.green('✓')} Pre-commit hook: Prevents committing thoughts/\n` +
+        `${chalk.green('✓')} Post-commit hook: Auto-syncs thoughts after commits`,
+      'Protection enabled',
     )
-    console.log(
-      `         ├── shared/      ${chalk.gray(`→ ${profileConfig.thoughtsRepo}/${profileConfig.reposDir}/${mappedName}/shared/`)}`,
+
+    p.outro(
+      chalk.gray('Next steps:\n') +
+        chalk.gray(
+          `  1. Run ${chalk.cyan('thoughtcabinet sync')} to create the searchable index\n`,
+        ) +
+        chalk.gray(
+          `  2. Create markdown files in ${chalk.cyan(`thoughts/${config.user}/`)} for your notes\n`,
+        ) +
+        chalk.gray(`  3. Your thoughts will sync automatically when you commit code\n`) +
+        chalk.gray(`  4. Run ${chalk.cyan('thoughtcabinet status')} to check sync status`),
     )
-    console.log(
-      `         └── global/      ${chalk.gray(`→ ${profileConfig.thoughtsRepo}/${profileConfig.globalDir}/`)}`,
-    )
-    console.log(`             ├── ${config.user}/     ${chalk.gray('(your cross-repo notes)')}`)
-    console.log(`             └── shared/  ${chalk.gray('(team cross-repo notes)')}`)
-    console.log('')
-    console.log('Protection enabled:')
-    console.log(`  ${chalk.green('✓')} Pre-commit hook: Prevents committing thoughts/`)
-    console.log(`  ${chalk.green('✓')} Post-commit hook: Auto-syncs thoughts after commits`)
-    console.log('')
-    console.log('Next steps:')
-    console.log(`  1. Run ${chalk.cyan('thoughtcabinet sync')} to create the searchable index`)
-    console.log(
-      `  2. Create markdown files in ${chalk.cyan(`thoughts/${config.user}/`)} for your notes`,
-    )
-    console.log(`  3. Your thoughts will sync automatically when you commit code`)
-    console.log(`  4. Run ${chalk.cyan('thoughtcabinet status')} to check sync status`)
   } catch (error) {
-    console.error(chalk.red(`Error during thoughts init: ${error}`))
+    p.log.error(`Error during thoughts init: ${error}`)
     process.exit(1)
   }
 }
