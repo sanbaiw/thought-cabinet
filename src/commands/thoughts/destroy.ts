@@ -7,6 +7,7 @@ import {
   getCurrentRepoPath,
   cleanupThoughtsDirectory,
 } from './utils/index.js'
+import { loadHooksConfig, getHooksForEvent, executeHooks } from '../../hooks/index.js'
 
 interface DestoryOptions {
   force?: boolean
@@ -70,6 +71,30 @@ export async function thoughtsDestoryCommand(options: DestoryOptions): Promise<v
       }
 
       console.log(chalk.gray('Only the local symlinks and configuration were removed.'))
+    }
+
+    // Execute PostThoughtsDestroy hooks
+    const hooksConfig = loadHooksConfig(currentRepo)
+    const postDestroyHooks = getHooksForEvent(hooksConfig, 'PostThoughtsDestroy')
+
+    if (postDestroyHooks.length > 0) {
+      const hookInput = {
+        hook_event_name: 'PostThoughtsDestroy' as const,
+        cwd: currentRepo,
+        thoughts_removed: result.thoughtsRemoved,
+        config_removed: result.configRemoved,
+        mapped_name: result.mappedName,
+        profile_name: result.profileName,
+      }
+
+      const hookEnv = {
+        THC_THOUGHTS_REMOVED: result.thoughtsRemoved ? 'true' : 'false',
+        THC_CONFIG_REMOVED: result.configRemoved ? 'true' : 'false',
+        THC_MAPPED_NAME: result.mappedName || '',
+        THC_PROFILE_NAME: result.profileName || '',
+      }
+
+      await executeHooks(postDestroyHooks, hookInput, hookEnv, true)
     }
   } catch (error) {
     console.error(chalk.red(`Error during thoughts destroy: ${error}`))

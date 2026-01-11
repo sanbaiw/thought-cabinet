@@ -22,6 +22,7 @@ import { validateProfile, resolveProfileForRepo, getRepoNameFromMapping, getProf
 import { RepoMappingObject } from '../../config.js'
 import { generateClaudeMd } from '../../templates/index.js'
 import { setupGitHooks, pullThoughtsFromRemote } from './init-core.js'
+import { loadHooksConfig, getHooksForEvent, executeHooks } from '../../hooks/index.js'
 
 interface InitOptions {
   force?: boolean
@@ -571,6 +572,32 @@ export async function thoughtsInitCommand(options: InitOptions): Promise<void> {
         `${chalk.green('✓')} Post-commit hook: Auto-syncs thoughts after commits`,
       'Protection enabled',
     )
+
+    // Execute PostThoughtsInit hooks
+    const hooksConfig = loadHooksConfig(repoPath)
+    const postInitHooks = getHooksForEvent(hooksConfig, 'PostThoughtsInit')
+
+    if (postInitHooks.length > 0) {
+      const hookInput = {
+        hook_event_name: 'PostThoughtsInit' as const,
+        cwd: repoPath,
+        thoughts_repo: profileConfig.thoughtsRepo,
+        repos_dir: profileConfig.reposDir,
+        global_dir: profileConfig.globalDir,
+        mapped_name: mappedName,
+        user: config.user,
+      }
+
+      const hookEnv = {
+        THC_THOUGHTS_REPO: profileConfig.thoughtsRepo,
+        THC_REPOS_DIR: profileConfig.reposDir,
+        THC_GLOBAL_DIR: profileConfig.globalDir,
+        THC_MAPPED_NAME: mappedName,
+        THC_USER: config.user,
+      }
+
+      await executeHooks(postInitHooks, hookInput, hookEnv, true)
+    }
 
     p.outro(
       chalk.gray('Next steps:\n') +
