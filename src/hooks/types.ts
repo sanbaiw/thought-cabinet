@@ -28,6 +28,8 @@ export type HookEvent =
   | 'PostWorktreeAdd'
   | 'PreWorktreeMerge'
   | 'PostWorktreeMerge'
+  | 'PreWorktreeRemove'
+  | 'PostWorktreeRemove'
   | 'PostThoughtsInit'
   | 'PostThoughtsDestroy'
   | 'PostThoughtsSync'

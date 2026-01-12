@@ -81,7 +81,7 @@ When initialized in a repo, creates `thoughts/` with symlinks:
 
 ### Hook Events
 
-- **Worktree**: PreWorktreeAdd, PostWorktreeAdd, PreWorktreeMerge, PostWorktreeMerge
+- **Worktree**: PreWorktreeAdd, PostWorktreeAdd, PreWorktreeMerge, PostWorktreeMerge, PreWorktreeRemove, PostWorktreeRemove
 - **Thoughts**: PostThoughtsInit, PostThoughtsDestroy, PostThoughtsSync
 
 ### Integration Points

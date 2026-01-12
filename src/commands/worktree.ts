@@ -10,6 +10,8 @@ import {
   getWorktreesBaseDir,
   findWorktree,
   hasUncommittedChanges,
+  hasUnmergedCommits,
+  getDefaultBranch,
   setBranchBase,
   runGitCommandOrThrow,
   runGitCommand,
@@ -54,6 +56,100 @@ interface WorktreeMergeOptions {
   keepSession?: boolean
   keepWorktree?: boolean
   keepBranch?: boolean
+}
+
+interface WorktreeRemoveOptions {
+  force?: boolean
+}
+
+/**
+ * Clean up thoughts directory for a worktree
+ */
+function cleanupWorktreeThoughts(
+  wtPath: string,
+  options: { force?: boolean; verbose?: boolean } = {},
+): void {
+  const config = loadThoughtsConfig({})
+  if (!config || !config.repoMappings[wtPath]) {
+    return
+  }
+
+  try {
+    if (options.verbose) {
+      console.log(chalk.gray('Cleaning up thoughts directory...'))
+    }
+    const result = cleanupThoughtsDirectory({
+      repoPath: wtPath,
+      config,
+      force: options.force,
+      verbose: false,
+    })
+
+    if (result.configRemoved) {
+      saveThoughtsConfig(config, {})
+    }
+
+    if (result.thoughtsRemoved && options.verbose) {
+      console.log(chalk.gray('✓ Thoughts directory cleaned up'))
+    }
+  } catch (error) {
+    if (options.verbose) {
+      console.log(chalk.yellow(`Warning: Could not clean up thoughts: ${(error as Error).message}`))
+    }
+  }
+}
+
+/**
+ * Kill tmux sessions for a worktree
+ */
+function cleanupWorktreeTmuxSession(wtPath: string): void {
+  const handle = path.basename(wtPath)
+  const sessionNames = allSessionNamesForHandle(handle)
+  for (const s of sessionNames) {
+    tmuxKillSession(s)
+  }
+}
+
+/**
+ * Remove git worktree
+ */
+function removeGitWorktree(
+  wtPath: string,
+  mainRoot: string,
+  options: { force?: boolean } = {},
+): void {
+  const removeArgs = ['worktree', 'remove']
+  if (options.force) {
+    removeArgs.push('--force')
+  }
+  removeArgs.push(wtPath)
+  runGitCommandOrThrow(removeArgs, { cwd: mainRoot })
+
+  // Best-effort prune
+  try {
+    runGitCommandOrThrow(['worktree', 'prune'], { cwd: mainRoot })
+  } catch {
+    // ignore
+  }
+}
+
+/**
+ * Delete a branch
+ */
+function deleteWorktreeBranch(
+  branch: string,
+  mainRoot: string,
+  options: { force?: boolean } = {},
+): void {
+  try {
+    runGitCommandOrThrow(['branch', '-d', branch], { cwd: mainRoot })
+  } catch {
+    if (options.force) {
+      runGitCommandOrThrow(['branch', '-D', branch], { cwd: mainRoot })
+    } else {
+      throw new Error(`Failed to delete branch '${branch}'. Re-run with --force to force delete.`)
+    }
+  }
 }
 
 export function worktreeCommand(program: Command): void {
@@ -380,31 +476,8 @@ export function worktreeCommand(program: Command): void {
         }
 
         // Clean up thoughts before checking uncommitted changes
-        const config = loadThoughtsConfig({})
-        if (config && config.repoMappings[wtResolved]) {
-          try {
-            console.log(chalk.gray('Cleaning up thoughts directory...'))
-            const result = cleanupThoughtsDirectory({
-              repoPath: wtResolved,
-              config,
-              force: options.force,
-              verbose: false, // Suppress detailed output during merge
-            })
-
-            if (result.configRemoved) {
-              saveThoughtsConfig(config, {})
-            }
-
-            if (result.thoughtsRemoved) {
-              console.log(chalk.gray('✓ Thoughts directory cleaned up'))
-            }
-          } catch (error) {
-            // Log error but don't fail the merge
-            console.log(
-              chalk.yellow(`Warning: Could not clean up thoughts: ${(error as Error).message}`),
-            )
-          }
-        }
+        // (thoughts/ directory would show as untracked and cause false positive)
+        cleanupWorktreeThoughts(wtResolved, { force: options.force, verbose: true })
 
         if (!options.force && hasUncommittedChanges(wtEntry.worktreePath)) {
           console.error(
@@ -495,6 +568,130 @@ export function worktreeCommand(program: Command): void {
         }
 
         console.log(chalk.green('✓ Merged and cleaned up'))
+      } catch (error) {
+        console.error(chalk.red(`Error: ${(error as Error).message}`))
+        process.exit(1)
+      }
+    })
+
+  wt.command('remove <name>')
+    .description(
+      'Remove a worktree and clean up associated resources (tmux session, thoughts, branch)',
+    )
+    .option('--force', 'Force removal even with uncommitted changes or unmerged commits')
+    .action(async (name: string, options: WorktreeRemoveOptions) => {
+      try {
+        if (!isGitRepo()) {
+          console.error(chalk.red('Error: not in a git repository'))
+          process.exit(1)
+        }
+
+        const mainRoot = getMainWorktreeRoot()
+        const mainRootResolved = path.resolve(mainRoot)
+
+        const wtEntry = findWorktree(name, mainRoot)
+        const wtResolved = path.resolve(wtEntry.worktreePath)
+
+        // Prevent removing the main worktree
+        if (wtResolved === mainRootResolved) {
+          console.error(chalk.red('Error: refusing to remove the main worktree'))
+          process.exit(1)
+        }
+
+        // Check for unmerged commits (only if branch exists and not detached)
+        // Do this before cleanup since it doesn't depend on thoughts directory
+        if (!options.force && !wtEntry.detached && wtEntry.branch !== '(detached)') {
+          const defaultBranch = getDefaultBranch(mainRoot)
+          if (hasUnmergedCommits(wtEntry.branch, defaultBranch, mainRoot)) {
+            console.error(
+              chalk.red(
+                `Error: branch '${wtEntry.branch}' has commits not merged into '${defaultBranch}'. ` +
+                  `Merge first or use --force to discard.`,
+              ),
+            )
+            process.exit(1)
+          }
+        }
+
+        // Execute PreWorktreeRemove hooks
+        const hooksConfig = loadHooksConfig(mainRoot)
+        const preRemoveHooks = getHooksForEvent(hooksConfig, 'PreWorktreeRemove')
+
+        if (preRemoveHooks.length > 0) {
+          const hookInput = {
+            hook_event_name: 'PreWorktreeRemove' as const,
+            cwd: mainRoot,
+            worktree_path: wtResolved,
+            worktree_name: name,
+            worktree_branch: wtEntry.branch,
+            main_root: mainRoot,
+          }
+
+          const hookEnv = {
+            THC_WORKTREE_PATH: wtResolved,
+            THC_WORKTREE_NAME: name,
+            THC_WORKTREE_BRANCH: wtEntry.branch,
+            THC_MAIN_ROOT: mainRoot,
+          }
+
+          await executeHooks(preRemoveHooks, hookInput, hookEnv, true)
+        }
+
+        // Clean up thoughts directory before checking uncommitted changes
+        // (thoughts/ directory would show as untracked and cause false positive)
+        cleanupWorktreeThoughts(wtResolved, { force: options.force, verbose: true })
+
+        // Check for uncommitted changes (after thoughts cleanup)
+        if (!options.force && hasUncommittedChanges(wtEntry.worktreePath)) {
+          console.error(
+            chalk.red(
+              'Error: worktree has uncommitted changes. Commit/stash first or use --force.',
+            ),
+          )
+          process.exit(1)
+        }
+
+        // Kill tmux session
+        cleanupWorktreeTmuxSession(wtResolved)
+
+        // Remove git worktree
+        console.log(chalk.gray('Removing git worktree...'))
+        removeGitWorktree(wtResolved, mainRoot, { force: options.force })
+
+        // Delete branch (only if not detached)
+        if (!wtEntry.detached && wtEntry.branch !== '(detached)') {
+          console.log(chalk.gray(`Deleting branch '${wtEntry.branch}'...`))
+          try {
+            deleteWorktreeBranch(wtEntry.branch, mainRoot, { force: options.force })
+          } catch (error) {
+            console.log(chalk.yellow(`Warning: ${(error as Error).message}`))
+          }
+        }
+
+        // Execute PostWorktreeRemove hooks
+        const postRemoveHooks = getHooksForEvent(hooksConfig, 'PostWorktreeRemove')
+
+        if (postRemoveHooks.length > 0) {
+          const hookInput = {
+            hook_event_name: 'PostWorktreeRemove' as const,
+            cwd: mainRoot,
+            worktree_path: wtResolved,
+            worktree_name: name,
+            worktree_branch: wtEntry.branch,
+            main_root: mainRoot,
+          }
+
+          const hookEnv = {
+            THC_WORKTREE_PATH: wtResolved,
+            THC_WORKTREE_NAME: name,
+            THC_WORKTREE_BRANCH: wtEntry.branch,
+            THC_MAIN_ROOT: mainRoot,
+          }
+
+          await executeHooks(postRemoveHooks, hookInput, hookEnv, true)
+        }
+
+        console.log(chalk.green('✓ Worktree removed'))
       } catch (error) {
         console.error(chalk.red(`Error: ${(error as Error).message}`))
         process.exit(1)

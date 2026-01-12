@@ -20,7 +20,7 @@ const program = new Command()
 program
   .name('thoughtcabinet')
   .description(
-    'Thought Cabinet (thc) — CLI for structured AI coding workflows with filesystem-based memory and context management.'
+    'Thought Cabinet (thc) — CLI for structured AI coding workflows with filesystem-based memory and context management.',
   )
   .version(version)
 

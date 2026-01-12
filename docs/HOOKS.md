@@ -32,6 +32,8 @@ Hooks are configured in `.thought-cabinet/hooks.json` at the repository root:
 - **PostWorktreeAdd**: After worktree + tmux + thoughts setup completes
 - **PreWorktreeMerge**: Before merge operations begin
 - **PostWorktreeMerge**: After merge + cleanup completes
+- **PreWorktreeRemove**: Before removing a worktree
+- **PostWorktreeRemove**: After worktree removal completes
 
 ### Thoughts Hooks
 
@@ -69,6 +71,13 @@ Hooks receive event-specific environment variables:
 - `THC_KEPT_SESSION`: "true" if session was kept
 - `THC_KEPT_WORKTREE`: "true" if worktree was kept
 - `THC_KEPT_BRANCH`: "true" if branch was kept
+
+#### PreWorktreeRemove / PostWorktreeRemove
+
+- `THC_WORKTREE_PATH`: Path to worktree being removed
+- `THC_WORKTREE_NAME`: Name/handle
+- `THC_WORKTREE_BRANCH`: Branch name (or "(detached)" if detached)
+- `THC_MAIN_ROOT`: Main worktree root
 
 #### PostThoughtsInit
 

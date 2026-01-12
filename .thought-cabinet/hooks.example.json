@@ -20,6 +20,16 @@
         ]
       }
     ],
+    "PostWorktreeRemove": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "echo 'Worktree @ $THC_WORKTREE_PATH removed'"
+          }
+        ]
+      }
+    ],
     "PostThoughtsSync": [
       {
         "hooks": [

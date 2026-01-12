@@ -139,6 +139,38 @@ export function hasUncommittedChanges(repoPath: string): boolean {
   return status.trim().length > 0
 }
 
+export function hasUnmergedCommits(branch: string, targetBranch: string, cwd: string): boolean {
+  try {
+    const count = runGitCommand(['rev-list', '--count', `${targetBranch}..${branch}`], { cwd })
+    return parseInt(count, 10) > 0
+  } catch {
+    // If comparison fails, assume there might be unmerged commits
+    return true
+  }
+}
+
+function branchExists(branch: string, cwd: string): boolean {
+  try {
+    runGitCommand(['rev-parse', '--verify', branch], { cwd })
+    return true
+  } catch {
+    return false
+  }
+}
+
+export function getDefaultBranch(cwd: string): string {
+  try {
+    const remoteBranch = runGitCommand(['symbolic-ref', 'refs/remotes/origin/HEAD'], { cwd })
+    return remoteBranch.replace('refs/remotes/origin/', '')
+  } catch {
+    // Remote HEAD not set, fall back to checking local branches
+  }
+
+  if (branchExists('main', cwd)) return 'main'
+  if (branchExists('master', cwd)) return 'master'
+  return 'main'
+}
+
 // Configuration
 export function setBranchBase(branch: string, base: string, cwd?: string): void {
   runGitCommandOrThrow(['config', '--local', `branch.${branch}.thc-base`, base], { cwd })
