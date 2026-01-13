@@ -17,14 +17,10 @@
   ],
   "scripts": {
     "build": "tsup",
-    "build:watch": "tsup --watch",
-    "dev": "npm run build && ./dist/index.js",
     "lint": "eslint . --ext .ts",
     "format": "prettier --write .",
-    "format:check": "prettier --check .",
     "prepublish": "npm run clean && npm run build",
     "test": "vitest run --passWithNoTests",
-    "test:watch": "vitest",
     "check": "npm run format:check && npm run lint && npm run test && npm run build",
     "clean": "rm -rf dist/"
   },
