@@ -40,7 +40,7 @@ last_updated_by: [Researcher name]
 
 ### [Component/Area 1]
 
-- Description of what exists ([file.ext:line](path/to/file.ext))
+- Description of what exists ([file.ext:line](path/to/file.ext#L...))
 - How it connects to other components
 - Current implementation details (without evaluation)
 
