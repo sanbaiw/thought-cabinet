@@ -15,7 +15,7 @@ Write structured implementation plans to `thoughts/shared/plans/YYYY-MM-DD-descr
 
 2. **Write plan** using the template structure below
 
-3. **Sync thoughts directory**: Run `thoughtcabinet sync` after writing
+3. **Sync thoughts directory**: Run `thoughtcabinet sync -m <message>` after writing
 
 ## Plan Template
 

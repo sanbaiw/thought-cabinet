@@ -135,7 +135,7 @@ Get user confirmation before proceeding.
 ### Step 5: Sync and Review
 
 1. **Sync the updated plan**:
-   - Run `thoughtcabinet sync`
+   - Run `thoughtcabinet sync -m <message>`
    - This ensures changes are properly indexed
 
 2. **Present the changes made**:

@@ -30,7 +30,7 @@ Generate research documentation for the thoughts/ directory with proper metadata
 
 4. **Sync**
    ```bash
-   thoughtcabinet sync
+   thoughtcabinet sync -m <message>
    ```
 
 ## Key Rules
