@@ -105,3 +105,5 @@ Then wait for the user's research query.
   - ALWAYS wait for all sub-agents to complete before synthesizing (step 4)
   - ALWAYS gather metadata before writing the document (step 5 before step 6)
   - NEVER write the research document with placeholder values
+- **Path handling**: The thoughts/searchable/ directory contains hard links for searching
+  - When referencing or writing files, always use their canonical path (e.g., `thoughts/shared/prs/123.md`, not `thoughts/searchable/shared/prs/123.md`)

@@ -223,6 +223,8 @@ When spawning research sub-tasks:
 5. **Request specific file:line references** in responses
 6. **Wait for all tasks to complete** before synthesizing
 7. **Verify sub-task results** - if something seems off, spawn follow-up tasks
+8. **Path handling**: The thoughts/searchable/ directory contains hard links for searching
+   - When referencing or writing files, always use their canonical path (e.g., `thoughts/shared/prs/123.md`, not `thoughts/searchable/shared/prs/123.md`)
 
 ## Example Interaction Flows
 
