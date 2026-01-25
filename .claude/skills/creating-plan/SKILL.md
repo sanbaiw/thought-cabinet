@@ -177,6 +177,37 @@ Iterate until the user is satisfied.
 - Think about edge cases
 - Include "what we're NOT doing"
 
+### Phase Independence
+
+Each phase must be independently verifiable. The implementing-plan workflow runs build/lint/test and pauses for manual verification after each phase, so phases cannot have circular dependencies.
+
+**Requirements:**
+- Code must compile/build after completing each phase alone
+- If Phase N imports from Phase N+1, include stubs or reorder phases
+- Success criteria should be testable without implementing later phases
+- Ask: "Can I run build/lint/test and pause for manual verification after this phase alone?"
+
+**Example of a BAD phase structure:**
+```
+Phase 1: Create command that imports handler
+Phase 2: Create handler module
+```
+Problem: Phase 1 won't compile until Phase 2 is done.
+
+**Example of a GOOD phase structure:**
+```
+Phase 1: Create handler module with core logic
+Phase 2: Create command that imports and uses handler
+```
+Each phase compiles independently.
+
+**Alternative if imports are unavoidable:**
+```
+Phase 1: Create command with stub imports, create empty handler module with stub exports
+Phase 2: Implement handler logic
+```
+Both phases compile; Phase 1 has minimal but working functionality.
+
 ### No Open Questions in Final Plan
 - If you encounter open questions, STOP
 - Research or ask for clarification immediately
