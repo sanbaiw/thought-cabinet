@@ -6,29 +6,45 @@ import { agentCommand } from './commands/agent.js'
 import { metadataCommand } from './commands/metadata.js'
 import { worktreeCommand } from './commands/worktree.js'
 import { hooksCommand } from './commands/hooks.js'
+import { completionCommand } from './commands/completion.js'
+import { handleCompletion } from './completion/handler.js'
 import dotenv from 'dotenv'
 import { createRequire } from 'node:module'
 
-// Load environment variables
-dotenv.config()
+async function main(): Promise<void> {
+  // Handle shell completion before anything else
+  const completionHandled = await handleCompletion()
+  if (completionHandled) {
+    process.exit(0)
+  }
 
-const require = createRequire(import.meta.url)
-const { version } = require('../package.json') as { version: string }
+  // Load environment variables
+  dotenv.config()
 
-const program = new Command()
+  const require = createRequire(import.meta.url)
+  const { version } = require('../package.json') as { version: string }
 
-program
-  .name('thoughtcabinet')
-  .description(
-    'Thought Cabinet (thc) — CLI for structured AI coding workflows with filesystem-based memory and context management.',
-  )
-  .version(version)
+  const program = new Command()
 
-// Add commands
-thoughtsCommand(program)
-agentCommand(program)
-metadataCommand(program)
-worktreeCommand(program)
-hooksCommand(program)
+  program
+    .name('thoughtcabinet')
+    .description(
+      'Thought Cabinet (thc) — CLI for structured AI coding workflows with filesystem-based memory and context management.',
+    )
+    .version(version)
 
-program.parse(process.argv)
+  // Add commands
+  thoughtsCommand(program)
+  agentCommand(program)
+  metadataCommand(program)
+  worktreeCommand(program)
+  hooksCommand(program)
+  completionCommand(program)
+
+  program.parse(process.argv)
+}
+
+main().catch(err => {
+  console.error(err)
+  process.exit(1)
+})
