@@ -1,23 +1,13 @@
----
-name: writing-plan
-description: Write implementation plan documents to thoughts/shared/plans/. Use when (1) creating a new implementation plan after research is complete, (2) writing technical specifications with phases and success criteria, (3) documenting planned changes with file paths and code snippets. Triggers on requests like "write the plan", "create the plan document", or after plan structure has been approved.
----
+# Implementation Plan Template
 
-# Write Implementation Plan
+## File Path Convention
 
-Write structured implementation plans to `thoughts/shared/plans/YYYY-MM-DD-description.md`.
+`thoughts/shared/plans/YYYY-MM-DD-description.md`
 
-## Workflow
+- YYYY-MM-DD: today's date
+- description: brief kebab-case summary (e.g., `improve-error-handling`)
 
-1. **Determine file path**: `thoughts/shared/plans/YYYY-MM-DD-description.md`
-   - YYYY-MM-DD: today's date
-   - description: brief kebab-case summary (e.g., `improve-error-handling`)
-
-2. **Write plan** using the template structure below
-
-3. **Sync thoughts directory**: Run `thoughtcabinet sync -m <message>` after writing
-
-## Plan Template
+## Template
 
 ````markdown
 # [Feature/Task Name] Implementation Plan
@@ -125,14 +115,12 @@ Write structured implementation plans to `thoughts/shared/plans/YYYY-MM-DD-descr
 Always separate into two categories:
 
 **Automated Verification** (commands agents can run):
-
 - Build/compile commands
 - Test suites
 - Type checking
 - Linting
 
 **Manual Verification** (requires human):
-
 - UI/UX functionality
 - Performance under real conditions
 - User acceptance criteria
