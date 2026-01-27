@@ -32,7 +32,8 @@ Plans are carefully designed, but reality can be messy:
 - Follow the plan's intent while adapting to discoveries
 - Implement each phase fully before moving to the next
 - Verify work makes sense in the broader codebase context
-- Update checkboxes in the plan as sections complete
+- **Update checkboxes in the plan as sections complete**
+- Maintain a detailed todo list tracking each task step-by-step
 
 ### Handling Mismatches
 
@@ -56,9 +57,9 @@ After implementing a phase:
 
 1. Run success criteria checks (usually `make check test`)
 2. Fix any issues before proceeding
-3. Update progress in both plan and todos
-4. Check off completed items in the plan file using Edit
-5. Pause for human verification:
+3. Update checkboxes in the plan file for each completed section using the Edit tool
+4. Update progress in todos (TodoWrite)
+5. **Pause for human verification**: After completing all automated verification for a phase, pause and inform the human that the phase is ready for manual testing. Use this format:
 
 ```
 Phase [N] Complete - Ready for Manual Verification
@@ -72,9 +73,9 @@ Please perform the manual verification steps listed in the plan:
 Let me know when manual testing is complete so I can proceed to Phase [N+1].
 ```
 
-If instructed to execute multiple phases consecutively, skip the pause until the last phase.
+If instructed to execute multiple phases consecutively, skip the pause until the last phase. Otherwise, assume you are just doing one phase.
 
-Do NOT check off manual testing steps until confirmed by the user.
+Do NOT check off manual testing steps in the plan until confirmed by the user.
 
 ## Resuming Work
 
