@@ -56,10 +56,9 @@ After implementing a phase:
 
 1. Run success criteria checks (usually `make check test`)
 2. Fix any issues before proceeding
-3. **Run code simplification** - Use the `code-simplifier` agent to refine the code modified in this phase
-4. Update progress in both plan and todos
-5. Check off completed items in the plan file using Edit
-6. Pause for human verification:
+3. Update progress in both plan and todos
+4. Check off completed items in the plan file using Edit
+5. Pause for human verification:
 
 ```
 Phase [N] Complete - Ready for Manual Verification
@@ -76,30 +75,6 @@ Let me know when manual testing is complete so I can proceed to Phase [N+1].
 If instructed to execute multiple phases consecutively, skip the pause until the last phase.
 
 Do NOT check off manual testing steps until confirmed by the user.
-
-## Code Simplification
-
-After each phase passes automated verification, spawn the `code-simplifier` agent to refine the modified code:
-
-```
-Task for code-simplifier:
-
-Review and simplify the code modified in Phase [N] of the implementation plan.
-
-Files modified in this phase:
-- [file1.ts]
-- [file2.ts]
-
-Focus on:
-1. Applying project standards from CLAUDE.md
-2. Improving clarity and reducing complexity
-3. Removing redundant code or abstractions
-4. Ensuring consistent naming and patterns
-
-Do NOT change functionality - only improve code quality.
-```
-
-If the simplifier makes changes, run verification again before proceeding.
 
 ## Resuming Work
 
