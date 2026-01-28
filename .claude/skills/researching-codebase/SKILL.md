@@ -93,7 +93,7 @@ Create multiple Task agents to research concurrently:
    - Description: kebab-case summary of topic
    - Example: `2025-01-08-authentication-flow.md`
 
-3. **Generate document** using template in [references/research-template.md](references/research-template.md)
+3. **Generate document** using template in [research-template.md](research-template.md)
 
 4. **Sync**:
    ```bash
