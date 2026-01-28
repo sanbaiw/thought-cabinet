@@ -92,10 +92,24 @@ Get confirmation before proceeding.
 ## Step 6: Sync and Review
 
 ```bash
-thoughtcabinet sync -m "Iterate on plan: [description]"
+thoughtcabinet sync -m "[message]"
 ```
 
 Present changes made and offer further iteration.
+
+   ```
+   I've updated the plan at `thoughts/shared/plans/[filename].md`
+
+   Changes made:
+   - [Specific change 1]
+   - [Specific change 2]
+
+   The updated plan now:
+   - [Key improvement]
+   - [Another improvement]
+
+   Would you like any further adjustments?
+   ```
 
 ## Guidelines
 
