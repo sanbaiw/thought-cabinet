@@ -1,6 +1,6 @@
 ---
 name: iterating-plan
-description: Iterate on existing implementation plans with thorough research and updates. Use when (1) updating existing plans based on feedback, (2) refining plan phases or success criteria, (3) adjusting plan scope. Triggers on requests like "update the plan", "iterate on this plan", or "/iterate_plan".
+description: Iterate on existing implementation plans with thorough research and updates. Use when updating existing plans based on feedback, refining plan phases or success criteria, or adjusting plan scope.
 ---
 
 # Iterating on Implementation Plans
@@ -42,18 +42,25 @@ Examples: "Add a phase for X", "Update success criteria", "Split Phase 2"
 
 Skip if changes are simple (reordering, rewording, scope adjustments).
 
-For changes requiring technical validation, spawn parallel sub-tasks:
+Only spawn research if the feedback requires *new technical understanding* or *validating assumptions*.
 
-**Code investigation:**
-- `codebase-locator` - Find relevant files
-- `codebase-analyzer` - Understand implementation details
-- `codebase-pattern-finder` - Find similar patterns
+1. **Create a research todo list** with TodoWrite (only if research is non-trivial)
+2. **Spawn parallel, focused sub-tasks** (do not research serially if tasks are independent)
+   - Be explicit about **exact directories** to search and what signals to extract
+   - Ask sub-tasks to return **file:line references** for every claim
+
+**Code investigation (pick the right one):**
+- `codebase-locator` - Find relevant files quickly
+- `codebase-analyzer` - Understand implementation details and constraints
+- `codebase-pattern-finder` - Find similar patterns to model after
 
 **Historical context:**
 - `thoughts-locator` - Find related research or decisions
-- `thoughts-analyzer` - Extract insights from documents
+- `thoughts-analyzer` - Extract insights from prior documents
 
-See [references/research-guidance.md](references/research-guidance.md) for detailed patterns.
+3. **Read any newly-identified files FULLY** into main context (Read without limit/offset)
+4. **Wait for ALL sub-tasks to complete** before synthesizing
+5. **Verify sub-task results**: if something seems off, spawn a follow-up task immediately
 
 ## Step 4: Confirm Approach
 
@@ -107,6 +114,10 @@ Present changes made and offer further iteration.
 - Allow course corrections
 - Don't disappear into research
 
+**Track Progress:**
+- Use TodoWrite to track research/update work if complex
+- Mark research tasks complete as you finish them
+
 **No Open Questions:**
 - Research or ask immediately if uncertain
 - Never update plan with unresolved questions
@@ -120,5 +131,7 @@ Maintain two-category structure when updating:
 
 ## Path Handling
 
-The `thoughts/searchable/` directory contains hard links.
-Always use canonical paths: `thoughts/shared/plans/...`, not `thoughts/searchable/shared/plans/...`
+- The `thoughts/searchable/` directory contains hard links for searching
+- Always use canonical paths when referencing or writing files
+  - Use: `thoughts/shared/prs/123.md`
+  - Not: `thoughts/searchable/shared/prs/123.md`
