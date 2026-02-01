@@ -19,8 +19,7 @@ Conduct comprehensive research across the codebase to answer questions by spawni
 
 ## Initial Setup
 
-When invoked, respond with:
-
+**If NO research query provided:**
 ```
 I'm ready to research the codebase. Please provide your research question or area of interest, and I'll analyze it thoroughly by exploring relevant components and connections.
 ```
