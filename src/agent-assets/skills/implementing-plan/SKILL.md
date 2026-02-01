@@ -109,5 +109,7 @@ Use sub-tasks sparingly - mainly for targeted debugging or exploring unfamiliar 
 
 ## Path Handling
 
-The `thoughts/searchable/` directory contains hard links.
-Always use canonical paths: `thoughts/shared/plans/...`, not `thoughts/searchable/shared/plans/...`
+- The `thoughts/searchable/` directory contains hard links for searching
+- Always use canonical paths when referencing or writing files
+  - Use: `thoughts/shared/prs/123.md`
+  - Not: `thoughts/searchable/shared/prs/123.md`

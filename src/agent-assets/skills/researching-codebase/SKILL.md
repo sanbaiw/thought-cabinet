@@ -93,12 +93,15 @@ Create multiple Task agents to research concurrently:
    - Description: kebab-case summary of topic
    - Example: `2025-01-08-authentication-flow.md`
 
-3. **Generate document** using template in [references/research-template.md](references/research-template.md)
+3. **Generate document** using template in [research-template.md](research-template.md)
 
-4. **Sync**:
+4. **Sync and present findings**:
    ```bash
-   thoughtcabinet sync -m <message>
+   thoughtcabinet sync -m "[message]"
    ```
+   - Present a concise summary of findings to the user
+   - Include key file references for easy navigation
+   - Ask if they have follow-up questions or need clarification
 
 **Document rules:**
 - **Document what IS, not what SHOULD BE**—no recommendations or critiques

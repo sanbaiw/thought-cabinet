@@ -127,11 +127,11 @@ After structure approval:
    - YYYY-MM-DD: today's date
    - description: brief kebab-case summary
 
-2. **Write plan** using [references/plan-template.md](references/plan-template.md)
+2. **Write plan** using [plan-template.md](plan-template.md)
 
 3. **Sync thoughts directory**:
    ```bash
-   thoughtcabinet sync
+   thoughtcabinet sync -m "[message]"
    ```
 
 ## Step 5: Review & Iterate
