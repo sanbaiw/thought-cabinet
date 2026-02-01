@@ -1,4 +1,10 @@
-import { execSync } from 'child_process'
+import path from 'path'
+import {
+  isGitRepo,
+  getCurrentBranch,
+  getCurrentCommit,
+  getRepoRoot,
+} from '../../git.js'
 
 interface GitInfo {
   repoRoot: string
@@ -8,50 +14,15 @@ interface GitInfo {
 }
 
 function getGitInfo(): GitInfo | null {
+  if (!isGitRepo()) {
+    return null
+  }
+
   try {
-    // Check if git is available and we're in a git repo
-    execSync('git rev-parse --is-inside-work-tree', {
-      encoding: 'utf8',
-      stdio: 'pipe',
-    })
-
-    const repoRoot = execSync('git rev-parse --show-toplevel', {
-      encoding: 'utf8',
-      stdio: 'pipe',
-    }).trim()
-
-    const repoName = repoRoot.split('/').pop() || ''
-
-    // Get current branch - try --show-current first, fall back to --abbrev-ref HEAD
-    let branch = ''
-    try {
-      branch = execSync('git branch --show-current', {
-        encoding: 'utf8',
-        stdio: 'pipe',
-      }).trim()
-    } catch {
-      try {
-        branch = execSync('git rev-parse --abbrev-ref HEAD', {
-          encoding: 'utf8',
-          stdio: 'pipe',
-        }).trim()
-      } catch {
-        // No branch yet (fresh repo with no commits)
-        branch = ''
-      }
-    }
-
-    // Get commit hash - may fail if no commits yet
-    let commit = ''
-    try {
-      commit = execSync('git rev-parse HEAD', {
-        encoding: 'utf8',
-        stdio: 'pipe',
-      }).trim()
-    } catch {
-      // No commits yet
-      commit = ''
-    }
+    const repoRoot = getRepoRoot()
+    const repoName = path.basename(repoRoot)
+    const branch = getCurrentBranch()
+    const commit = getCurrentCommit()
 
     return { repoRoot, repoName, branch, commit }
   } catch {

@@ -42,10 +42,10 @@ export function isGitRepo(cwd?: string): boolean {
  * 获取当前 git 仓库的主仓库路径（处理 worktree 场景）
  * 如果当前目录是 worktree，返回主仓库路径；否则返回 null
  */
-export function getMainRepoPath(): string | null {
+export function getMainRepoPath(cwd?: string): string | null {
   try {
-    const gitCommonDir = runGitCommand(['rev-parse', '--git-common-dir'])
-    const gitDir = runGitCommand(['rev-parse', '--git-dir'])
+    const gitCommonDir = runGitCommand(['rev-parse', '--git-common-dir'], { cwd })
+    const gitDir = runGitCommand(['rev-parse', '--git-dir'], { cwd })
 
     if (gitCommonDir !== gitDir && gitCommonDir !== '.git') {
       const mainRepoPath = path.dirname(path.resolve(gitCommonDir))
@@ -174,4 +174,39 @@ export function getDefaultBranch(cwd: string): string {
 // Configuration
 export function setBranchBase(branch: string, base: string, cwd?: string): void {
   runGitCommandOrThrow(['config', '--local', `branch.${branch}.thc-base`, base], { cwd })
+}
+
+// Branch and commit info
+export function getCurrentBranch(cwd?: string): string {
+  try {
+    return runGitCommand(['branch', '--show-current'], { cwd })
+  } catch {
+    try {
+      return runGitCommand(['rev-parse', '--abbrev-ref', 'HEAD'], { cwd })
+    } catch {
+      return ''
+    }
+  }
+}
+
+export function getCurrentCommit(cwd?: string): string {
+  try {
+    return runGitCommand(['rev-parse', 'HEAD'], { cwd })
+  } catch {
+    return ''
+  }
+}
+
+export function getWorktreeRoot(cwd?: string): string {
+  return runGitCommand(['rev-parse', '--show-toplevel'], { cwd })
+}
+
+export function getRepoRoot(cwd?: string): string {
+  // If in a worktree, return the main repo path
+  const mainRepoPath = getMainRepoPath(cwd)
+  if (mainRepoPath) {
+    return mainRepoPath
+  }
+  // Otherwise return the current worktree root (which is the main repo)
+  return getWorktreeRoot(cwd)
 }
