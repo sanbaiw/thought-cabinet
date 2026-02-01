@@ -82,11 +82,12 @@ Create multiple Task agents to research concurrently:
 
 ### Step 5: Generate Research Document
 
-1. **Gather metadata**:
+1. **Gather metadata (required)**:
    ```bash
    thoughtcabinet metadata
    ```
    Captures: researcher name, git commit, branch, repository, timestamp
+   - **DO NOT** use raw `git` commands for metadata unless `thoughtcabinet metadata` fails.
 
 2. **Determine filename**:
    - Path: `thoughts/shared/research/YYYY-MM-DD-description.md`
@@ -94,11 +95,13 @@ Create multiple Task agents to research concurrently:
    - Example: `2025-01-08-authentication-flow.md`
 
 3. **Generate document** using template in [research-template.md](research-template.md)
+   - **MUST** Read the template and follow the structure exactly.
 
 4. **Sync and present findings**:
    ```bash
-   thoughtcabinet sync -m "[message]"
+   thoughtcabinet sync -m "[<repo>] Research: <topic>"
    ```
+   - Use `Repository Name` from `thoughtcabinet metadata` for `<repo>`
    - Present a concise summary of findings to the user
    - Include key file references for easy navigation
    - Ask if they have follow-up questions or need clarification

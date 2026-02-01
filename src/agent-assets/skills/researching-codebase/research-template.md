@@ -1,8 +1,8 @@
 # Research Document Template
 
-## YAML Frontmatter
+## Document Structure
 
-```yaml
+```markdown
 ---
 date: [ISO 8601 datetime with timezone, e.g., 2025-01-08T14:30:00+08:00]
 researcher: [From `thoughtcabinet metadata` output]
@@ -15,11 +15,7 @@ status: complete
 last_updated: [YYYY-MM-DD format]
 last_updated_by: [Researcher name]
 ---
-```
 
-## Document Structure
-
-```markdown
 # Research: [User's Question/Topic]
 
 **Date**: [datetime with timezone]

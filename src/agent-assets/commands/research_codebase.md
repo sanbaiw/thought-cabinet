@@ -4,4 +4,4 @@ model: opus
 disable-model-invocation: true
 ---
 
-Invoke the researching-codebase skill to handle the research query.
+Invoke the researching-codebase skill and follow it exactly as presented to you
