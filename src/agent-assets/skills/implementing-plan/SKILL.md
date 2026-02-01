@@ -15,7 +15,7 @@ When given a plan path:
 2. Read ALL files mentioned in the plan without limit/offset
 3. Understand how the pieces fit together
 4. Create a todo list to track progress
-5. Begin implementation if requirements are clear
+5. Begin implementation of the **first uncompleted phase only**
 
 If no plan path provided, ask for one:
 ```
@@ -51,15 +51,18 @@ Why this matters: [explanation]
 How should I proceed?
 ```
 
-## Phase Verification
+## Phase Completion Checklist
 
-After implementing a phase:
+After implementing a phase, follow this checklist **in order**:
 
-1. Run success criteria checks (usually `make check test`)
-2. Fix any issues before proceeding
-3. Update checkboxes in the plan file for each completed section using the Edit tool
+1. Run automated success criteria checks (compile, tests, etc.)
+2. Fix any issues found
+3. Update checkboxes in the plan file for completed automated verification items
 4. Update progress in todos (TodoWrite)
-5. **Pause for human verification**: After completing all automated verification for a phase, pause and inform the human that the phase is ready for manual testing. Use this format:
+5. **STOP** and present the verification message (see below)
+6. **WAIT** for user confirmation before starting next phase
+
+### Verification Message Template
 
 ```
 Phase [N] Complete - Ready for Manual Verification
@@ -73,9 +76,14 @@ Please perform the manual verification steps listed in the plan:
 Let me know when manual testing is complete so I can proceed to Phase [N+1].
 ```
 
-If instructed to execute multiple phases consecutively, skip the pause until the last phase. Otherwise, assume you are just doing one phase.
+### Before Starting Any New Phase - Ask Yourself:
 
-Do NOT check off manual testing steps in the plan until confirmed by the user.
+1. Did the user explicitly confirm the previous phase is complete?
+2. Did the user explicitly request multiple phases?
+
+If BOTH answers are NO → **Do not proceed. Wait for user input.**
+
+Do NOT check off manual testing steps in the plan until confirmed by the user
 
 ## Resuming Work
 
@@ -97,11 +105,11 @@ Use sub-tasks sparingly - mainly for targeted debugging or exploring unfamiliar 
 
 ## Guidelines
 
+**One Phase at a Time**: Stop after each phase. Wait for confirmation. This is the default.
+
 **Follow Intent**: The plan is your guide, but judgment matters. Adapt to discoveries while preserving the plan's goals.
 
 **Be Thorough**: Read files completely. Understand context before making changes.
-
-**Be Incremental**: Complete each phase fully before starting the next.
 
 **Communicate Clearly**: When things don't match, explain why and ask for direction.
 
