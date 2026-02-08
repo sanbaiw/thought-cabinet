@@ -3,6 +3,7 @@ import {
   sessionNameForHandle,
   legacySessionNameForHandle,
   allSessionNamesForHandle,
+  isTmuxAvailable,
 } from './tmux.js'
 
 describe('sessionNameForHandle', () => {
@@ -25,5 +26,11 @@ describe('allSessionNamesForHandle', () => {
     expect(names).toContain('thc-feature')
     expect(names).toContain('thc:feature')
     expect(names).toHaveLength(2)
+  })
+})
+
+describe('isTmuxAvailable', () => {
+  it('should return a boolean', () => {
+    expect(typeof isTmuxAvailable()).toBe('boolean')
   })
 })

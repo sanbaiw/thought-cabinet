@@ -15,6 +15,21 @@ export function allSessionNamesForHandle(handle: string): string[] {
   return [sessionNameForHandle(handle), legacySessionNameForHandle(handle)]
 }
 
+// Availability check
+let _tmuxAvailable: boolean | undefined
+
+export function isTmuxAvailable(): boolean {
+  if (_tmuxAvailable === undefined) {
+    try {
+      execFileSync('tmux', ['-V'], { stdio: 'ignore' })
+      _tmuxAvailable = true
+    } catch {
+      _tmuxAvailable = false
+    }
+  }
+  return _tmuxAvailable
+}
+
 // Session management
 export function listTmuxSessions(): string[] {
   try {

@@ -14,6 +14,7 @@ import {
   allSessionNamesForHandle,
   tmuxHasSession,
   tmuxNewSession,
+  isTmuxAvailable,
 } from '../../tmux.js'
 import { copyAgentConfigDirs } from '../../agent-config.js'
 import {
@@ -43,11 +44,15 @@ export async function worktreeAddCommand(name: string, options: WorktreeAddOptio
 
     fs.mkdirSync(path.dirname(worktreePath), { recursive: true })
 
-    const sessionCandidates = allSessionNamesForHandle(name)
-    const existingSession = sessionCandidates.find(s => tmuxHasSession(s))
-    if (existingSession) {
-      console.error(chalk.red(`Error: tmux session already exists: ${existingSession}`))
-      process.exit(1)
+    const tmuxAvailable = isTmuxAvailable()
+
+    if (tmuxAvailable) {
+      const sessionCandidates = allSessionNamesForHandle(name)
+      const existingSession = sessionCandidates.find(s => tmuxHasSession(s))
+      if (existingSession) {
+        console.error(chalk.red(`Error: tmux session already exists: ${existingSession}`))
+        process.exit(1)
+      }
     }
 
     // Execute PreWorktreeAdd hooks
@@ -92,7 +97,11 @@ export async function worktreeAddCommand(name: string, options: WorktreeAddOptio
       setBranchBase(branch, options.base, worktreePath)
     }
 
-    tmuxNewSession(sessionName, worktreePath)
+    if (tmuxAvailable) {
+      tmuxNewSession(sessionName, worktreePath)
+    } else {
+      console.log(chalk.yellow('Warning: tmux not found, skipping session creation'))
+    }
 
     // Copy agent configuration directories
     const configResult = copyAgentConfigDirs({
@@ -138,8 +147,10 @@ export async function worktreeAddCommand(name: string, options: WorktreeAddOptio
 
     console.log(chalk.green('\n✓ Worktree created'))
     console.log(chalk.gray(`Path: ${worktreePath}`))
-    console.log(chalk.gray(`Tmux session: ${sessionName}`))
-    console.log(chalk.gray(`Attach: tmux attach -t ${sessionName}`))
+    if (tmuxAvailable) {
+      console.log(chalk.gray(`Tmux session: ${sessionName}`))
+      console.log(chalk.gray(`Attach: tmux attach -t ${sessionName}`))
+    }
   } catch (error) {
     console.error(chalk.red(`Error: ${(error as Error).message}`))
     process.exit(1)
