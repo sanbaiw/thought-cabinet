@@ -18,6 +18,7 @@ When given a plan path:
 5. Begin implementation of the **first uncompleted phase only**
 
 If no plan path provided, ask for one:
+
 ```
 Which plan would you like to implement? Please provide the path.
 Tip: `ls -lt thoughts/shared/plans/ | head`

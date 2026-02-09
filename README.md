@@ -70,12 +70,14 @@ thc agent init
 ```
 
 This interactively installs to `.claude/`:
+
 - **Commands** - Slash commands for workflow phases (`/research_codebase`, `/create_plan`, etc.)
 - **Agents** - Specialized sub-agents for code analysis and research
 - **Skills** - Extended capabilities like document generation
 - **Settings** - Project permissions and configuration
 
 Options:
+
 ```bash
 thc agent init --all              # Copy all files without prompting
 thc agent init --force            # Overwrite existing .claude directory
@@ -86,13 +88,13 @@ thc agent init --name codebuddy   # Use alternative agent (codebuddy)
 
 These commands guide the AI through each phase of development:
 
-| Command | Purpose |
-|---------|---------|
+| Command              | Purpose                                                               |
+| -------------------- | --------------------------------------------------------------------- |
 | `/research_codebase` | Deep-dive into codebase, save findings to `thoughts/shared/research/` |
-| `/create_plan` | Create implementation plan with phases and success criteria |
-| `/iterate_plan` | Refine existing plans based on feedback |
-| `/implement_plan` | Execute plan phase-by-phase with verification |
-| `/validate_plan` | Verify implementation against plan's success criteria |
+| `/create_plan`       | Create implementation plan with phases and success criteria           |
+| `/iterate_plan`      | Refine existing plans based on feedback                               |
+| `/implement_plan`    | Execute plan phase-by-phase with verification                         |
+| `/validate_plan`     | Verify implementation against plan's success criteria                 |
 
 ### Context Offloading
 
@@ -128,6 +130,7 @@ cat thoughts/yourusername/gotchas.md
 ```
 
 All thoughts are git-tracked, so you can:
+
 - Share knowledge with team members via `thc sync`
 - See how understanding evolved over time
 - Recover context even after months
@@ -233,6 +236,7 @@ thc init
 ```
 
 This sets up:
+
 - A global thoughts repository (default: `~/thoughts`)
 - Directory structure for this project
 - Git hooks for protection and auto-sync
@@ -322,9 +326,7 @@ Configure hooks in `.thought-cabinet/hooks.json` to run commands on events:
   "hooks": {
     "PostWorktreeAdd": [
       {
-        "hooks": [
-          { "type": "command", "command": "npm install", "timeout": 300 }
-        ]
+        "hooks": [{ "type": "command", "command": "npm install", "timeout": 300 }]
       }
     ]
   }
@@ -332,6 +334,7 @@ Configure hooks in `.thought-cabinet/hooks.json` to run commands on events:
 ```
 
 **Available events:**
+
 - `PreWorktreeAdd`, `PostWorktreeAdd` - Worktree creation
 - `PreWorktreeMerge`, `PostWorktreeMerge` - Worktree merge
 - `PostThoughtsInit`, `PostThoughtsDestroy`, `PostThoughtsSync` - Thoughts lifecycle
@@ -339,6 +342,7 @@ Configure hooks in `.thought-cabinet/hooks.json` to run commands on events:
 ### Git Hooks
 
 Automatically installed git hooks:
+
 - **pre-commit**: Prevents accidental commits of `thoughts/` directory
 - **post-commit**: Auto-syncs thoughts after each commit
 
@@ -358,12 +362,14 @@ your-project/
 ## Best Practices
 
 **For AI-assisted development:**
+
 - Always run `/research_codebase` before planning complex features
 - Use `/create_plan` to make implementation explicit and verifiable
 - Implement in worktrees for maximum throughput
 - Run `/validate_plan` before merging to catch deviations
 
 **General tips:**
+
 - Run `thc sync` frequently to share knowledge
 - Use `thc prune` to clean up stale mappings
 

@@ -97,19 +97,19 @@ thoughtcabinet sync -m "[message]"
 
 Present changes made and offer further iteration.
 
-   ```
-   I've updated the plan at `thoughts/shared/plans/[filename].md`
+```
+I've updated the plan at `thoughts/shared/plans/[filename].md`
 
-   Changes made:
-   - [Specific change 1]
-   - [Specific change 2]
+Changes made:
+- [Specific change 1]
+- [Specific change 2]
 
-   The updated plan now:
-   - [Key improvement]
-   - [Another improvement]
+The updated plan now:
+- [Key improvement]
+- [Another improvement]
 
-   Would you like any further adjustments?
-   ```
+Would you like any further adjustments?
+```
 
 ## Guidelines
 

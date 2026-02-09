@@ -1,10 +1,5 @@
 import path from 'path'
-import {
-  isGitRepo,
-  getCurrentBranch,
-  getCurrentCommit,
-  getRepoRoot,
-} from '../../git.js'
+import { isGitRepo, getCurrentBranch, getCurrentCommit, getRepoRoot } from '../../git.js'
 
 interface GitInfo {
   repoRoot: string
