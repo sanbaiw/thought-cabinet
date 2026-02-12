@@ -7,6 +7,8 @@ import {
   getCurrentRepoPath,
   expandPath,
   updateSymlinksForNewUsers,
+  parseGitRemoteUrl,
+  buildFileShareLink,
 } from './utils/index.js'
 import { resolveProfileForRepo, getRepoNameFromMapping } from './profile/utils.js'
 import { createSearchableIndex } from './init-core.js'
@@ -84,6 +86,41 @@ function syncThoughts(thoughtsRepo: string, message: string): void {
       try {
         execSync('git push', { cwd: expandedRepo, stdio: 'pipe' })
         console.log(chalk.green('✅ Pushed to remote'))
+
+        // Generate share links for changed files
+        try {
+          const branch = execSync('git rev-parse --abbrev-ref HEAD', {
+            cwd: expandedRepo,
+            encoding: 'utf8',
+            stdio: 'pipe',
+          }).trim()
+
+          const changedFiles = execSync('git diff --name-only HEAD~1 HEAD', {
+            cwd: expandedRepo,
+            encoding: 'utf8',
+            stdio: 'pipe',
+          })
+            .trim()
+            .split('\n')
+            .filter(Boolean)
+
+          const remoteUrl = execSync('git remote get-url origin', {
+            cwd: expandedRepo,
+            encoding: 'utf8',
+            stdio: 'pipe',
+          }).trim()
+
+          const parsed = parseGitRemoteUrl(remoteUrl)
+          if (parsed && changedFiles.length > 0) {
+            console.log(chalk.cyan('📎 Share links:'))
+            for (const file of changedFiles) {
+              const link = buildFileShareLink(parsed, branch, file)
+              console.log(chalk.gray(`   ${link}`))
+            }
+          }
+        } catch {
+          // Non-critical: don't fail sync if share link generation fails
+        }
       } catch {
         console.log(chalk.yellow('⚠️  Could not push to remote. You may need to push manually.'))
       }

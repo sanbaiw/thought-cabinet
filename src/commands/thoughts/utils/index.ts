@@ -22,3 +22,7 @@ export { updateSymlinksForNewUsers } from './symlinks.js'
 // Cleanup - thoughts directory cleanup
 export { cleanupThoughtsDirectory } from './cleanup.js'
 export type { CleanupThoughtsOptions, CleanupThoughtsResult } from './cleanup.js'
+
+// Git URL - remote URL parsing and share link generation
+export { parseGitRemoteUrl, buildFileShareLink } from './git-url.js'
+export type { ParsedGitUrl } from './git-url.js'
