@@ -1,6 +1,5 @@
 import fs from 'fs'
 import path from 'path'
-import { execSync } from 'child_process'
 import chalk from 'chalk'
 import type { ThoughtsConfig } from './config.js'
 import { getRepoNameFromMapping, getProfileNameFromMapping } from '../profile/utils.js'
@@ -57,12 +56,6 @@ export function cleanupThoughtsDirectory({
   if (fs.existsSync(searchableDir)) {
     if (verbose) {
       console.log(chalk.gray('Removing searchable directory...'))
-    }
-    try {
-      // Reset permissions in case they're restricted
-      execSync(`chmod -R 755 "${searchableDir}"`, { stdio: 'pipe' })
-    } catch {
-      // Ignore chmod errors
     }
     fs.rmSync(searchableDir, { recursive: true, force: true })
   }

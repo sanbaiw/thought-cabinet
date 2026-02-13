@@ -496,16 +496,6 @@ export async function thoughtsInitCommand(options: InitOptions): Promise<void> {
     // Create thoughts directory in current repo
     const thoughtsDir = path.join(currentRepo, 'thoughts')
     if (fs.existsSync(thoughtsDir)) {
-      // Handle searchable directories specially if they exist (might have read-only permissions)
-      const searchableDir = path.join(thoughtsDir, 'searchable')
-      if (fs.existsSync(searchableDir)) {
-        try {
-          // Reset permissions so we can delete it
-          execSync(`chmod -R 755 "${searchableDir}"`, { stdio: 'pipe' })
-        } catch {
-          // Ignore chmod errors
-        }
-      }
       fs.rmSync(thoughtsDir, { recursive: true, force: true })
     }
     fs.mkdirSync(thoughtsDir)

@@ -53,15 +53,6 @@ export function setupThoughtsDirectory(options: SetupThoughtsOptions): SetupThou
   
   // Remove existing thoughts directory if present
   if (fs.existsSync(thoughtsDir)) {
-    // Handle searchable directories specially (might have read-only permissions)
-    const searchableDir = path.join(thoughtsDir, 'searchable')
-    if (fs.existsSync(searchableDir)) {
-      try {
-        execSync(`chmod -R 755 "${searchableDir}"`, { stdio: 'pipe' })
-      } catch {
-        // Ignore chmod errors
-      }
-    }
     fs.rmSync(thoughtsDir, { recursive: true, force: true })
   }
   fs.mkdirSync(thoughtsDir)
@@ -219,12 +210,6 @@ export function createSearchableIndex(thoughtsDir: string): number {
   
   // Remove existing searchable directory if it exists
   if (fs.existsSync(searchDir)) {
-    try {
-      // Reset permissions so we can delete it
-      execSync(`chmod -R 755 "${searchDir}"`, { stdio: 'pipe' })
-    } catch {
-      // Ignore chmod errors
-    }
     fs.rmSync(searchDir, { recursive: true, force: true })
   }
 
