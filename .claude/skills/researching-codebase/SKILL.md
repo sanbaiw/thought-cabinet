@@ -19,8 +19,7 @@ Conduct comprehensive research across the codebase to answer questions by spawni
 
 ## Initial Setup
 
-When invoked, respond with:
-
+**If NO research query provided:**
 ```
 I'm ready to research the codebase. Please provide your research question or area of interest, and I'll analyze it thoroughly by exploring relevant components and connections.
 ```
@@ -82,11 +81,12 @@ Create multiple Task agents to research concurrently:
 
 ### Step 5: Generate Research Document
 
-1. **Gather metadata**:
+1. **Gather metadata (required)**:
    ```bash
    thoughtcabinet metadata
    ```
    Captures: researcher name, git commit, branch, repository, timestamp
+   - **DO NOT** use raw `git` commands for metadata unless `thoughtcabinet metadata` fails.
 
 2. **Determine filename**:
    - Path: `thoughts/shared/research/YYYY-MM-DD-description.md`
@@ -94,10 +94,11 @@ Create multiple Task agents to research concurrently:
    - Example: `2025-01-08-authentication-flow.md`
 
 3. **Generate document** using template in [research-template.md](research-template.md)
+   - **MUST** Read the template and follow the structure exactly.
 
 4. **Sync and present findings**:
    ```bash
-   thoughtcabinet sync -m "[message]"
+   thoughtcabinet sync -m "Research: <topic>"
    ```
    - Present a concise summary of findings to the user
    - Include key file references for easy navigation

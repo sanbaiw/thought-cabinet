@@ -132,7 +132,7 @@ After structure approval:
 
 3. **Sync thoughts directory**:
    ```bash
-   thoughtcabinet sync -m "[message]"
+   thoughtcabinet sync -m "Plan: <description>"
    ```
 
 ## Step 5: Review & Iterate

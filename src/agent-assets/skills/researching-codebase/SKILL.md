@@ -98,9 +98,8 @@ Create multiple Task agents to research concurrently:
 
 4. **Sync and present findings**:
    ```bash
-   thoughtcabinet sync -m "[<repo>] Research: <topic>"
+   thoughtcabinet sync -m "Research: <topic>"
    ```
-   - Use `Repository Name` from `thoughtcabinet metadata` for `<repo>`
    - Present a concise summary of findings to the user
    - Include key file references for easy navigation
    - Ask if they have follow-up questions or need clarification

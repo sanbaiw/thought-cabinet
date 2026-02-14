@@ -13,7 +13,7 @@ Create detailed implementation plans through an interactive, iterative process. 
 2. **Ask clarifying questions** - Only what research couldn't answer
 3. **Discover and propose options** - Present design choices with tradeoffs
 4. **Structure the plan** - Get approval on phases before detailing
-5. **Write the plan** - Use the template in [references/plan-template.md](references/plan-template.md)
+5. **Write the plan**
 6. **Iterate** - Refine until user is satisfied
 
 ## Step 1: Context Gathering
@@ -128,10 +128,11 @@ After structure approval:
    - description: brief kebab-case summary
 
 2. **Write plan** using [plan-template.md](plan-template.md)
+   - **MUST** Read the template and follow the structure exactly.
 
 3. **Sync thoughts directory**:
    ```bash
-   thoughtcabinet sync -m "[message]"
+   thoughtcabinet sync -m "Plan: <description>"
    ```
 
 ## Step 5: Review & Iterate

@@ -92,7 +92,7 @@ Get confirmation before proceeding.
 ## Step 6: Sync and Review
 
 ```bash
-thoughtcabinet sync -m "[message]"
+thoughtcabinet sync -m "Plan update: <description>"
 ```
 
 Present changes made and offer further iteration.
