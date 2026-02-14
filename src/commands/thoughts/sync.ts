@@ -6,6 +6,7 @@ import {
   loadThoughtsConfig,
   getCurrentRepoPath,
   expandPath,
+  getRepoNameFromPath,
   updateSymlinksForNewUsers,
   parseGitRemoteUrl,
   buildFileShareLink,
@@ -32,7 +33,7 @@ function checkGitStatus(repoPath: string): boolean {
   }
 }
 
-function syncThoughts(thoughtsRepo: string, message: string): void {
+function syncThoughts(thoughtsRepo: string, message: string, repoName?: string): void {
   const expandedRepo = expandPath(thoughtsRepo)
 
   try {
@@ -44,7 +45,9 @@ function syncThoughts(thoughtsRepo: string, message: string): void {
 
     if (hasChanges) {
       // Commit changes
-      const commitMessage = message || `Sync thoughts - ${new Date().toISOString()}`
+      const defaultMessage = `Sync thoughts - ${new Date().toISOString()}`
+      const body = message || defaultMessage
+      const commitMessage = repoName ? `[${repoName}] ${body}` : body
       execFileSync('git', ['commit', '-m', commitMessage], { cwd: expandedRepo, stdio: 'pipe' })
 
       console.log(chalk.green('✅ Thoughts synchronized'))
@@ -180,7 +183,11 @@ export async function thoughtsSyncCommand(options: SyncOptions): Promise<void> {
 
     // Sync the thoughts repository using profile's thoughtsRepo
     console.log(chalk.blue('Syncing thoughts...'))
-    syncThoughts(profileConfig.thoughtsRepo, options.message || '')
+    const repoName =
+      config.commitRepoPrefix !== false
+        ? mappedName || getRepoNameFromPath(currentRepo)
+        : undefined
+    syncThoughts(profileConfig.thoughtsRepo, options.message || '', repoName)
 
     // Execute PostThoughtsSync hooks
     const hooksConfig = loadHooksConfig(currentRepo)

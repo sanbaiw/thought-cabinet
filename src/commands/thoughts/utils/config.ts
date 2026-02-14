@@ -11,6 +11,7 @@ export interface ThoughtsConfig {
   user: string
   repoMappings: Record<string, string | RepoMappingObject>
   profiles?: Record<string, ProfileConfig>
+  commitRepoPrefix?: boolean
 }
 
 /**

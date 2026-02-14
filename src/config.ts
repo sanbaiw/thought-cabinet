@@ -25,6 +25,7 @@ export type ConfigFile = {
     user: string
     repoMappings: Record<string, string | RepoMappingObject>
     profiles?: Record<string, ProfileConfig>
+    commitRepoPrefix?: boolean
   }
 }
 
