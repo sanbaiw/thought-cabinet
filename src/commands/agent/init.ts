@@ -4,40 +4,57 @@ import chalk from 'chalk'
 import * as p from '@clack/prompts'
 import { fileURLToPath } from 'url'
 import { dirname } from 'path'
-import { AgentProduct } from './registry.js'
+import type { AgentType, AgentInitOptions, Asset, InstallMode, InstallScope } from './types.js'
+import { agents, detectInstalledAgents, getAllAgents } from './registry.js'
+import { discoverAllAssets } from './discovery.js'
+import { installAssetForAgent } from './installer.js'
 
 // Get the directory of this module
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = dirname(__filename)
 
-export interface AgentInitOptions {
-  product: AgentProduct
-  force?: boolean
-  all?: boolean
-  maxThinkingTokens?: number
+/**
+ * Resolve the source directory for agent assets.
+ * Priority: --source flag > bundled assets
+ */
+function resolveSourceDir(customSource?: string): string | null {
+  if (customSource) {
+    const resolved = path.resolve(customSource)
+    if (fs.existsSync(resolved)) return resolved
+    return null
+  }
+
+  // Bundled assets (same heuristic as before)
+  const possiblePaths = [
+    path.resolve(__dirname, '..', 'src/agent-assets'),
+    path.resolve(__dirname, '../..', 'src/agent-assets'),
+  ]
+
+  for (const candidate of possiblePaths) {
+    if (fs.existsSync(candidate)) return candidate
+  }
+
+  return null
 }
 
-function ensureGitignoreEntry(targetDir: string, entry: string, productName: string): void {
+function ensureGitignoreEntry(targetDir: string, entry: string, label: string): void {
   const gitignorePath = path.join(targetDir, '.gitignore')
 
-  // Read existing .gitignore or create empty
   let gitignoreContent = ''
   if (fs.existsSync(gitignorePath)) {
     gitignoreContent = fs.readFileSync(gitignorePath, 'utf8')
   }
 
-  // Check if entry already exists
   const lines = gitignoreContent.split('\n')
   if (lines.some(line => line.trim() === entry)) {
-    return // Already exists
+    return
   }
 
-  // Add entry with section comment
   const newContent =
     gitignoreContent +
     (gitignoreContent && !gitignoreContent.endsWith('\n') ? '\n' : '') +
     '\n# ' +
-    productName +
+    label +
     ' local settings\n' +
     entry +
     '\n'
@@ -45,144 +62,241 @@ function ensureGitignoreEntry(targetDir: string, entry: string, productName: str
   fs.writeFileSync(gitignorePath, newContent)
 }
 
-/**
- * Recursively copy a directory
- * @returns Number of files copied
- */
-function copyDirectoryRecursive(sourceDir: string, targetDir: string): number {
-  let filesCopied = 0
+/** Agent-specific environment variables for settings */
+const AGENT_ENV_VARS: Partial<Record<AgentType, Record<string, string>>> = {
+  'claude-code': {
+    CLAUDE_BASH_MAINTAIN_WORKING_DIR: '1',
+  },
+  codebuddy: {
+    CODEBUDDY_BASH_MAINTAIN_PROJECT_WORKING_DIR: '1',
+  },
+}
 
-  // Create target directory
-  fs.mkdirSync(targetDir, { recursive: true })
-
-  const entries = fs.readdirSync(sourceDir, { withFileTypes: true })
-
-  for (const entry of entries) {
-    const sourcePath = path.join(sourceDir, entry.name)
-    const targetPath = path.join(targetDir, entry.name)
-
-    if (entry.isDirectory()) {
-      // Recursively copy subdirectory
-      filesCopied += copyDirectoryRecursive(sourcePath, targetPath)
-    } else {
-      // Copy file
-      fs.copyFileSync(sourcePath, targetPath)
-      filesCopied++
-    }
+async function installSettings(
+  sourceDir: string,
+  agentTypes: AgentType[],
+  scope: InstallScope,
+  cwd: string,
+  maxThinkingTokens: number,
+): Promise<void> {
+  const settingsPath = path.join(sourceDir, 'settings.template.json')
+  if (!fs.existsSync(settingsPath)) {
+    p.log.warn('settings.template.json not found in source, skipping settings')
+    return
   }
 
-  return filesCopied
+  const settingsContent = fs.readFileSync(settingsPath, 'utf8')
+  const baseSettings = JSON.parse(settingsContent)
+
+  for (const agentType of agentTypes) {
+    const agent = agents[agentType]
+    const settings = JSON.parse(JSON.stringify(baseSettings)) // deep clone
+
+    // Set thinking tokens
+    if (!settings.env) settings.env = {}
+    settings.env.MAX_THINKING_TOKENS = maxThinkingTokens.toString()
+
+    // Set agent-specific env vars
+    const agentEnv = AGENT_ENV_VARS[agentType]
+    if (agentEnv) {
+      for (const [key, value] of Object.entries(agentEnv)) {
+        settings.env[key] = value
+      }
+    }
+
+    // Determine target path
+    const agentBase =
+      scope === 'global' && agent.globalConfigDir
+        ? agent.globalConfigDir
+        : path.join(cwd, agent.configDir)
+
+    fs.mkdirSync(agentBase, { recursive: true })
+    const targetPath = path.join(agentBase, 'settings.json')
+    fs.writeFileSync(targetPath, JSON.stringify(settings, null, 2) + '\n')
+    p.log.success(`Settings installed for ${agent.displayName}`)
+  }
 }
 
 export async function agentInitCommand(options: AgentInitOptions): Promise<void> {
-  const { product } = options
-
   try {
-    p.intro(chalk.blue(`Initialize ${product.name} Configuration`))
+    p.intro(chalk.blue('Initialize Agent Configuration'))
 
-    // Check if running in interactive terminal
+    // Non-interactive check
     if (!process.stdin.isTTY && !options.all) {
       p.log.error('Not running in interactive terminal.')
-      p.log.info('Use --all flag to copy all files without prompting.')
+      p.log.info('Use --all flag to install all assets without prompting.')
       process.exit(1)
     }
 
-    const targetDir = process.cwd()
-    const agentTargetDir = path.join(targetDir, product.dirName)
-
-    // Determine source location
-    // Try multiple possible locations for the agent directory
-    const possiblePaths = [
-      // When installed via npm: package root is one level up from dist
-      path.resolve(__dirname, '..', product.sourceDirName),
-      // When running from repo: repo root is two levels up from dist
-      path.resolve(__dirname, '../..', product.sourceDirName),
-    ]
-
-    let sourceAgentDir: string | null = null
-    for (const candidatePath of possiblePaths) {
-      if (fs.existsSync(candidatePath)) {
-        sourceAgentDir = candidatePath
-        break
+    // 1. Resolve source directory
+    const sourceDir = resolveSourceDir(options.source)
+    if (!sourceDir) {
+      p.log.error('Source directory not found.')
+      if (options.source) {
+        p.log.info(`Specified path: ${options.source}`)
+      } else {
+        p.log.info('Bundled agent assets not found. Are you running from the package?')
       }
-    }
-
-    // Verify source directory exists
-    if (!sourceAgentDir) {
-      p.log.error(`Source ${product.dirName} directory not found in expected locations`)
-      p.log.info('Searched paths:')
-      possiblePaths.forEach(candidatePath => {
-        p.log.info(`  - ${candidatePath}`)
-      })
-      p.log.info('Are you running from the thoughtcabinet repository or npm package?')
       process.exit(1)
     }
 
-    // Check if agent directory already exists
-    if (fs.existsSync(agentTargetDir) && !options.force) {
-      const overwrite = await p.confirm({
-        message: `${product.dirName} directory already exists. Overwrite?`,
-        initialValue: false,
+    // 2. Discover assets
+    const discovered = await discoverAllAssets(sourceDir)
+    const totalAssets =
+      discovered.commands.length + discovered.agents.length + discovered.skills.length
+
+    if (totalAssets === 0) {
+      p.log.warn(`No assets found in ${sourceDir}`)
+      process.exit(0)
+    }
+
+    // 3. Agent selection
+    let selectedAgents: AgentType[]
+
+    if (options.agents) {
+      selectedAgents = options.agents
+    } else if (options.all) {
+      // In non-interactive mode, default to claude-code
+      selectedAgents = ['claude-code']
+    } else {
+      const detected = await detectInstalledAgents()
+      const allAgents = getAllAgents()
+
+      const agentSelection = await p.multiselect({
+        message: 'Select target agents:',
+        options: allAgents.map(agent => ({
+          value: agent.name,
+          label: agent.displayName,
+          hint: detected.includes(agent.name) ? 'detected' : undefined,
+        })),
+        initialValues: detected.length > 0 ? detected : ['claude-code'],
+        required: true,
       })
 
-      if (p.isCancel(overwrite) || !overwrite) {
+      if (p.isCancel(agentSelection)) {
         p.cancel('Operation cancelled.')
         process.exit(0)
       }
+
+      selectedAgents = agentSelection as AgentType[]
     }
 
+    // 4. Scope selection
+    let scope: InstallScope = options.scope ?? 'project'
+
+    if (!options.scope && !options.all) {
+      const supportsGlobal = selectedAgents.some(a => agents[a].globalConfigDir !== undefined)
+
+      if (supportsGlobal) {
+        const scopeChoice = await p.select({
+          message: 'Installation scope:',
+          options: [
+            {
+              value: 'project' as const,
+              label: 'Project',
+              hint: 'Install to current directory',
+            },
+            {
+              value: 'global' as const,
+              label: 'Global',
+              hint: 'Install to home directory (available across projects)',
+            },
+          ],
+          initialValue: 'project' as const,
+        })
+
+        if (p.isCancel(scopeChoice)) {
+          p.cancel('Operation cancelled.')
+          process.exit(0)
+        }
+
+        scope = scopeChoice as InstallScope
+      }
+    }
+
+    // 5. Mode selection
+    let mode: InstallMode = options.mode ?? 'symlink'
+
+    if (!options.mode && !options.all) {
+      const modeChoice = await p.select({
+        message: 'Installation mode:',
+        options: [
+          {
+            value: 'symlink' as const,
+            label: 'Symlink (recommended)',
+            hint: 'Canonical storage + symlinks; update once, all agents see changes',
+          },
+          {
+            value: 'copy' as const,
+            label: 'Copy',
+            hint: 'Independent copies for each agent',
+          },
+        ],
+        initialValue: 'symlink' as const,
+      })
+
+      if (p.isCancel(modeChoice)) {
+        p.cancel('Operation cancelled.')
+        process.exit(0)
+      }
+
+      mode = modeChoice as InstallMode
+    }
+
+    // 6. Check for existing installations (per-agent)
+    if (!options.force) {
+      const cwd = process.cwd()
+      for (const agentType of selectedAgents) {
+        const agent = agents[agentType]
+        const agentDir =
+          scope === 'global' && agent.globalConfigDir
+            ? agent.globalConfigDir
+            : path.join(cwd, agent.configDir)
+
+        if (fs.existsSync(agentDir)) {
+          if (!options.all) {
+            const overwrite = await p.confirm({
+              message: `${agent.displayName} directory already exists at ${agentDir}. Overwrite?`,
+              initialValue: false,
+            })
+
+            if (p.isCancel(overwrite) || !overwrite) {
+              p.cancel('Operation cancelled.')
+              process.exit(0)
+            }
+          }
+        }
+      }
+    }
+
+    // 7. Category selection
     let selectedCategories: string[]
 
     if (options.all) {
       selectedCategories = ['commands', 'agents', 'skills', 'settings']
     } else {
-      // Interactive selection
-      // Calculate actual file counts
-      let commandsCount = 0
-      let agentsCount = 0
-
-      const commandsDir = path.join(sourceAgentDir, 'commands')
-      const agentsDir = path.join(sourceAgentDir, 'agents')
-
-      if (fs.existsSync(commandsDir)) {
-        commandsCount = fs.readdirSync(commandsDir).length
-      }
-
-      if (fs.existsSync(agentsDir)) {
-        agentsCount = fs.readdirSync(agentsDir).length
-      }
-
-      let skillsCount = 0
-      const skillsDir = path.join(sourceAgentDir, 'skills')
-
-      if (fs.existsSync(skillsDir)) {
-        // Count skill folders (not files)
-        skillsCount = fs
-          .readdirSync(skillsDir, { withFileTypes: true })
-          .filter(dirent => dirent.isDirectory()).length
-      }
-
       p.note(
-        'Use ↑/↓ to move, press Space to select/deselect, press A to select/deselect all, press Enter to confirm. (Subsequent multi-selects apply; Ctrl+C to exit)',
-        'Multi-select instructions',
+        'Use ↑/↓ to move, Space to select/deselect, A to toggle all, Enter to confirm.',
+        'Multi-select',
       )
+
       const selection = await p.multiselect({
-        message: 'What would you like to copy?',
+        message: 'What would you like to install?',
         options: [
           {
             value: 'commands',
             label: 'Commands',
-            hint: `${commandsCount} workflow commands (planning, CI, research, etc.)`,
+            hint: `${discovered.commands.length} workflow commands`,
           },
           {
             value: 'agents',
             label: 'Agents',
-            hint: `${agentsCount} specialized sub-agents for code analysis`,
+            hint: `${discovered.agents.length} specialized sub-agents`,
           },
           {
             value: 'skills',
             label: 'Skills',
-            hint: `${skillsCount} specialized skill packages for extended capabilities`,
+            hint: `${discovered.skills.length} skill packages`,
           },
           {
             value: 'settings',
@@ -202,116 +316,53 @@ export async function agentInitCommand(options: AgentInitOptions): Promise<void>
       selectedCategories = selection as string[]
 
       if (selectedCategories.length === 0) {
-        p.cancel('No items selected.')
+        p.cancel('No categories selected.')
         process.exit(0)
       }
     }
 
-    // Create agent directory
-    fs.mkdirSync(agentTargetDir, { recursive: true })
+    // 8. Per-category asset selection (interactive)
+    const assetsToInstall: Asset[] = []
 
-    let filesCopied = 0
-    let filesSkipped = 0
-
-    // Wizard-style file selection for each category
-    const filesToCopyByCategory: Record<string, string[]> = {}
-
-    // If in interactive mode, prompt for file selection per category
     if (!options.all) {
-      // Commands file selection (if selected)
-      if (selectedCategories.includes('commands')) {
-        const sourceDir = path.join(sourceAgentDir, 'commands')
-        if (fs.existsSync(sourceDir)) {
-          const allFiles = fs.readdirSync(sourceDir)
-          const fileSelection = await p.multiselect({
-            message: 'Select command files to copy:',
-            options: allFiles.map(file => ({
-              value: file,
-              label: file,
-            })),
-            initialValues: allFiles,
-            required: false,
-          })
+      for (const category of ['commands', 'agents', 'skills'] as const) {
+        if (!selectedCategories.includes(category)) continue
+        const categoryAssets = discovered[category]
+        if (categoryAssets.length === 0) continue
 
-          if (p.isCancel(fileSelection)) {
-            p.cancel('Operation cancelled.')
-            process.exit(0)
-          }
+        const assetSelection = await p.multiselect({
+          message: `Select ${category} to install:`,
+          options: categoryAssets.map(asset => ({
+            value: asset.name,
+            label: asset.name,
+            hint: asset.description || undefined,
+          })),
+          initialValues: categoryAssets.map(a => a.name),
+          required: false,
+        })
 
-          filesToCopyByCategory['commands'] = fileSelection as string[]
-
-          if (filesToCopyByCategory['commands'].length === 0) {
-            filesSkipped += allFiles.length
-          }
+        if (p.isCancel(assetSelection)) {
+          p.cancel('Operation cancelled.')
+          process.exit(0)
         }
+
+        const selectedNames = new Set(assetSelection as string[])
+        assetsToInstall.push(...categoryAssets.filter(a => selectedNames.has(a.name)))
       }
-
-      // Agents file selection (if selected)
-      if (selectedCategories.includes('agents')) {
-        const sourceDir = path.join(sourceAgentDir, 'agents')
-        if (fs.existsSync(sourceDir)) {
-          const allFiles = fs.readdirSync(sourceDir)
-          const fileSelection = await p.multiselect({
-            message: 'Select agent files to copy:',
-            options: allFiles.map(file => ({
-              value: file,
-              label: file,
-            })),
-            initialValues: allFiles,
-            required: false,
-          })
-
-          if (p.isCancel(fileSelection)) {
-            p.cancel('Operation cancelled.')
-            process.exit(0)
-          }
-
-          filesToCopyByCategory['agents'] = fileSelection as string[]
-
-          if (filesToCopyByCategory['agents'].length === 0) {
-            filesSkipped += allFiles.length
-          }
-        }
-      }
-
-      // Skills folder selection (if selected)
-      if (selectedCategories.includes('skills')) {
-        const sourceDir = path.join(sourceAgentDir, 'skills')
-        if (fs.existsSync(sourceDir)) {
-          // Get skill folders (directories only)
-          const allSkills = fs
-            .readdirSync(sourceDir, { withFileTypes: true })
-            .filter(dirent => dirent.isDirectory())
-            .map(dirent => dirent.name)
-
-          if (allSkills.length > 0) {
-            const skillSelection = await p.multiselect({
-              message: 'Select skills to copy:',
-              options: allSkills.map(skill => ({
-                value: skill,
-                label: skill,
-              })),
-              initialValues: allSkills,
-              required: false,
-            })
-
-            if (p.isCancel(skillSelection)) {
-              p.cancel('Operation cancelled.')
-              process.exit(0)
-            }
-
-            filesToCopyByCategory['skills'] = skillSelection as string[]
-          }
+    } else {
+      // Non-interactive: add all assets from selected categories
+      for (const category of ['commands', 'agents', 'skills'] as const) {
+        if (selectedCategories.includes(category)) {
+          assetsToInstall.push(...discovered[category])
         }
       }
     }
 
-    // Configure settings
+    // 9. Settings configuration
     let maxThinkingTokens = options.maxThinkingTokens
 
-    // Prompt for settings if in interactive mode and not provided via flags
-    if (!options.all && selectedCategories.includes('settings')) {
-      if (maxThinkingTokens === undefined) {
+    if (selectedCategories.includes('settings')) {
+      if (!options.all && maxThinkingTokens === undefined) {
         const tokensPrompt = await p.text({
           message: 'Maximum thinking tokens:',
           initialValue: '32000',
@@ -330,141 +381,75 @@ export async function agentInitCommand(options: AgentInitOptions): Promise<void>
         }
 
         maxThinkingTokens = parseInt(tokensPrompt as string, 10)
-      }
-    } else if (selectedCategories.includes('settings')) {
-      // Non-interactive mode: use defaults if not provided
-      if (maxThinkingTokens === undefined) {
+      } else if (maxThinkingTokens === undefined) {
         maxThinkingTokens = 32000
       }
     }
 
-    // Copy selected categories
-    for (const category of selectedCategories) {
-      if (category === 'commands' || category === 'agents') {
-        const sourceDir = path.join(sourceAgentDir, category)
-        const targetCategoryDir = path.join(agentTargetDir, category)
+    // 10. Installation loop
+    const cwd = process.cwd()
+    let totalInstalled = 0
+    let totalFailed = 0
+    const symlinkWarnings: string[] = []
 
-        if (!fs.existsSync(sourceDir)) {
-          p.log.warn(`${category} directory not found in source, skipping`)
-          continue
-        }
+    const s = p.spinner()
+    s.start('Installing assets...')
 
-        // Get all files in category
-        const allFiles = fs.readdirSync(sourceDir)
+    for (const asset of assetsToInstall) {
+      for (const agentType of selectedAgents) {
+        const result = await installAssetForAgent(asset, agentType, {
+          scope,
+          cwd,
+          mode,
+        })
 
-        // Determine which files to copy
-        let filesToCopy = allFiles
-        if (!options.all && filesToCopyByCategory[category]) {
-          filesToCopy = filesToCopyByCategory[category]
-        }
-
-        if (filesToCopy.length === 0) {
-          continue
-        }
-
-        // Copy files
-        fs.mkdirSync(targetCategoryDir, { recursive: true })
-
-        for (const file of filesToCopy) {
-          const sourcePath = path.join(sourceDir, file)
-          const targetPath = path.join(targetCategoryDir, file)
-
-          fs.copyFileSync(sourcePath, targetPath)
-          filesCopied++
-        }
-
-        filesSkipped += allFiles.length - filesToCopy.length
-        p.log.success(`Copied ${filesToCopy.length} ${category} file(s)`)
-      } else if (category === 'settings') {
-        const settingsPath = path.join(sourceAgentDir, 'settings.template.json')
-        const targetSettingsPath = path.join(agentTargetDir, 'settings.json')
-
-        if (fs.existsSync(settingsPath)) {
-          // Read source settings
-          const settingsContent = fs.readFileSync(settingsPath, 'utf8')
-          const settings = JSON.parse(settingsContent)
-
-          // Merge user's configuration into settings
-          if (maxThinkingTokens !== undefined) {
-            if (!settings.env) {
-              settings.env = {}
-            }
-            settings.env.MAX_THINKING_TOKENS = maxThinkingTokens.toString()
+        if (result.success) {
+          totalInstalled++
+          if (result.symlinkFailed) {
+            symlinkWarnings.push(
+              `${asset.name} → ${agents[agentType].displayName}: symlink failed, copied instead`,
+            )
           }
-
-          // Set product-specific environment variables
-          if (!settings.env) {
-            settings.env = {}
-          }
-          for (const [key, value] of Object.entries(product.defaultEnvVars)) {
-            settings.env[key] = value
-          }
-
-          // Write modified settings
-          fs.writeFileSync(targetSettingsPath, JSON.stringify(settings, null, 2) + '\n')
-          filesCopied++
-          p.log.success(`Copied settings.json (maxTokens: ${maxThinkingTokens})`)
         } else {
-          p.log.warn('settings.json not found in source, skipping')
+          totalFailed++
+          p.log.warn(`Failed: ${asset.name} → ${agents[agentType].displayName}: ${result.error}`)
         }
-      } else if (category === 'skills') {
-        const sourceDir = path.join(sourceAgentDir, 'skills')
-        const targetCategoryDir = path.join(agentTargetDir, 'skills')
-
-        if (!fs.existsSync(sourceDir)) {
-          p.log.warn('skills directory not found in source, skipping')
-          continue
-        }
-
-        // Get all skill folders
-        const allSkills = fs
-          .readdirSync(sourceDir, { withFileTypes: true })
-          .filter(dirent => dirent.isDirectory())
-          .map(dirent => dirent.name)
-
-        // Determine which skills to copy
-        let skillsToCopy = allSkills
-        if (!options.all && filesToCopyByCategory['skills']) {
-          skillsToCopy = filesToCopyByCategory['skills']
-        }
-
-        if (skillsToCopy.length === 0) {
-          continue
-        }
-
-        // Create skills directory
-        fs.mkdirSync(targetCategoryDir, { recursive: true })
-
-        // Copy each selected skill folder recursively
-        let skillFilesCopied = 0
-        for (const skill of skillsToCopy) {
-          const sourceSkillPath = path.join(sourceDir, skill)
-          const targetSkillPath = path.join(targetCategoryDir, skill)
-
-          skillFilesCopied += copyDirectoryRecursive(sourceSkillPath, targetSkillPath)
-        }
-
-        filesCopied += skillFilesCopied
-        filesSkipped += allSkills.length - skillsToCopy.length // Count skipped skills (not files)
-        p.log.success(`Copied ${skillsToCopy.length} skill(s) (${skillFilesCopied} files)`)
       }
     }
 
-    // Update .gitignore to exclude settings.local.json
+    s.stop('Installation complete.')
+
+    // 11. Settings installation (per-agent)
     if (selectedCategories.includes('settings')) {
-      ensureGitignoreEntry(targetDir, product.gitignoreEntry, product.name)
-      p.log.info('Updated .gitignore to exclude settings.local.json')
+      await installSettings(sourceDir, selectedAgents, scope, cwd, maxThinkingTokens!)
     }
 
-    let message = `Successfully copied ${filesCopied} file(s) to ${agentTargetDir}`
-    if (filesSkipped > 0) {
-      message += chalk.gray(`\n   Skipped ${filesSkipped} file(s)`)
+    // 12. Gitignore updates (per-agent)
+    for (const agentType of selectedAgents) {
+      const agent = agents[agentType]
+      if (scope === 'project') {
+        ensureGitignoreEntry(cwd, `${agent.configDir}/settings.local.json`, agent.displayName)
+      }
     }
-    message += chalk.gray(`\n   You can now use these commands in ${product.name}.`)
+
+    // 13. Summary
+    if (symlinkWarnings.length > 0) {
+      p.log.warn('Symlink warnings:')
+      for (const warning of symlinkWarnings) {
+        p.log.warn(`  ${warning}`)
+      }
+    }
+
+    const agentNames = selectedAgents.map(a => agents[a].displayName).join(', ')
+    let message = `Installed ${totalInstalled} asset(s) to ${agentNames}`
+    if (totalFailed > 0) {
+      message += chalk.red(` (${totalFailed} failed)`)
+    }
+    message += chalk.gray(`\n   Scope: ${scope} | Mode: ${mode}`)
 
     p.outro(message)
   } catch (error) {
-    p.log.error(`Error during ${product.name} init: ${error}`)
+    p.log.error(`Error during agent init: ${error}`)
     process.exit(1)
   }
 }

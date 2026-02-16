@@ -32,7 +32,3 @@ export {
   discoverMarkdownAssets,
   discoverAllAssets,
 } from './discovery.js'
-
-// Legacy (to be removed in Plan 2)
-export type { AgentProduct } from './registry.js'
-export { AGENT_PRODUCTS, getAgentProduct, getAllAgentProducts } from './registry.js'

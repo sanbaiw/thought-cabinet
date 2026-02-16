@@ -1,6 +1,7 @@
 import { Command } from 'commander'
 import { agentInitCommand } from './agent/init.js'
-import { getAgentProduct } from './agent/registry.js'
+import type { AgentType, InstallMode } from './agent/types.js'
+import { isValidAgentType } from './agent/registry.js'
 
 export function agentCommand(program: Command): void {
   const agent = program.command('agent').description('Manage coding agent configuration')
@@ -8,14 +9,43 @@ export function agentCommand(program: Command): void {
   agent
     .command('init')
     .description('Initialize coding agent configuration in current directory')
-    .option('--force', 'Force overwrite of existing agent directory')
-    .option('--all', 'Copy all files without prompting')
+    .option('--agent <agents...>', 'Target agents (e.g., claude-code codebuddy cursor)')
+    .option('-g, --global', 'Install to global scope')
+    .option('--mode <mode>', 'Installation mode: symlink or copy (default: symlink)')
+    .option('--source <path>', 'Source directory for assets')
+    .option('--force', 'Force overwrite of existing installations')
+    .option('--all', 'Install all assets without prompting')
     .option('--max-thinking-tokens <number>', 'Maximum thinking tokens (default: 32000)', value =>
       parseInt(value, 10),
     )
-    .option('--name <name>', 'Agent name to configure (claude|codebuddy)', 'claude')
     .action(async options => {
-      const product = getAgentProduct(options.name)
-      await agentInitCommand({ ...options, product })
+      // Validate agent types
+      const agentTypes: AgentType[] | undefined = options.agent?.map((a: string) => {
+        if (!isValidAgentType(a)) {
+          console.error(`Unknown agent: ${a}`)
+          process.exit(1)
+        }
+        return a as AgentType
+      })
+
+      // Validate mode
+      let mode: InstallMode | undefined
+      if (options.mode) {
+        if (options.mode !== 'symlink' && options.mode !== 'copy') {
+          console.error(`Invalid mode: ${options.mode}. Must be 'symlink' or 'copy'`)
+          process.exit(1)
+        }
+        mode = options.mode as InstallMode
+      }
+
+      await agentInitCommand({
+        agents: agentTypes,
+        scope: options.global ? 'global' : undefined,
+        mode,
+        source: options.source,
+        force: options.force,
+        all: options.all,
+        maxThinkingTokens: options.maxThinkingTokens,
+      })
     })
 }
