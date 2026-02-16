@@ -3,15 +3,12 @@ import path from 'path'
 import chalk from 'chalk'
 import * as p from '@clack/prompts'
 import { fileURLToPath } from 'url'
-import { dirname } from 'path'
 import type { AgentType, AgentInitOptions, Asset, InstallMode, InstallScope } from './types.js'
 import { agents, detectInstalledAgents, getAllAgents } from './registry.js'
 import { discoverAllAssets } from './discovery.js'
 import { installAssetForAgent } from './installer.js'
 
-// Get the directory of this module
-const __filename = fileURLToPath(import.meta.url)
-const __dirname = dirname(__filename)
+const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
 /**
  * Resolve the source directory for agent assets.
@@ -20,46 +17,36 @@ const __dirname = dirname(__filename)
 function resolveSourceDir(customSource?: string): string | null {
   if (customSource) {
     const resolved = path.resolve(customSource)
-    if (fs.existsSync(resolved)) return resolved
-    return null
+    return fs.existsSync(resolved) ? resolved : null
   }
 
-  // Bundled assets (same heuristic as before)
-  const possiblePaths = [
+  const candidates = [
     path.resolve(__dirname, '..', 'src/agent-assets'),
     path.resolve(__dirname, '../..', 'src/agent-assets'),
   ]
 
-  for (const candidate of possiblePaths) {
-    if (fs.existsSync(candidate)) return candidate
-  }
-
-  return null
+  return candidates.find(p => fs.existsSync(p)) ?? null
 }
 
 function ensureGitignoreEntry(targetDir: string, entry: string, label: string): void {
   const gitignorePath = path.join(targetDir, '.gitignore')
+  const existing = fs.existsSync(gitignorePath) ? fs.readFileSync(gitignorePath, 'utf8') : ''
 
-  let gitignoreContent = ''
-  if (fs.existsSync(gitignorePath)) {
-    gitignoreContent = fs.readFileSync(gitignorePath, 'utf8')
-  }
-
-  const lines = gitignoreContent.split('\n')
-  if (lines.some(line => line.trim() === entry)) {
+  if (existing.split('\n').some(line => line.trim() === entry)) {
     return
   }
 
-  const newContent =
-    gitignoreContent +
-    (gitignoreContent && !gitignoreContent.endsWith('\n') ? '\n' : '') +
-    '\n# ' +
-    label +
-    ' local settings\n' +
-    entry +
-    '\n'
+  const separator = existing && !existing.endsWith('\n') ? '\n' : ''
+  const block = `\n# ${label} local settings\n${entry}\n`
+  fs.writeFileSync(gitignorePath, existing + separator + block)
+}
 
-  fs.writeFileSync(gitignorePath, newContent)
+/** Resolve the agent's config directory based on scope */
+function resolveAgentBaseDir(agentType: AgentType, scope: InstallScope, cwd: string): string {
+  const agent = agents[agentType]
+  return scope === 'global' && agent.globalConfigDir
+    ? agent.globalConfigDir
+    : path.join(cwd, agent.configDir)
 }
 
 /** Agent-specific environment variables for settings */
@@ -92,27 +79,20 @@ async function installSettings(
     const agent = agents[agentType]
     const settings = JSON.parse(JSON.stringify(baseSettings)) // deep clone
 
-    // Set thinking tokens
     if (!settings.env) settings.env = {}
     settings.env.MAX_THINKING_TOKENS = maxThinkingTokens.toString()
 
-    // Set agent-specific env vars
     const agentEnv = AGENT_ENV_VARS[agentType]
     if (agentEnv) {
-      for (const [key, value] of Object.entries(agentEnv)) {
-        settings.env[key] = value
-      }
+      Object.assign(settings.env, agentEnv)
     }
 
-    // Determine target path
-    const agentBase =
-      scope === 'global' && agent.globalConfigDir
-        ? agent.globalConfigDir
-        : path.join(cwd, agent.configDir)
-
+    const agentBase = resolveAgentBaseDir(agentType, scope, cwd)
     fs.mkdirSync(agentBase, { recursive: true })
-    const targetPath = path.join(agentBase, 'settings.json')
-    fs.writeFileSync(targetPath, JSON.stringify(settings, null, 2) + '\n')
+    fs.writeFileSync(
+      path.join(agentBase, 'settings.json'),
+      JSON.stringify(settings, null, 2) + '\n',
+    )
     p.log.success(`Settings installed for ${agent.displayName}`)
   }
 }
@@ -121,14 +101,12 @@ export async function agentInitCommand(options: AgentInitOptions): Promise<void>
   try {
     p.intro(chalk.blue('Initialize Agent Configuration'))
 
-    // Non-interactive check
     if (!process.stdin.isTTY && !options.all) {
       p.log.error('Not running in interactive terminal.')
       p.log.info('Use --all flag to install all assets without prompting.')
       process.exit(1)
     }
 
-    // 1. Resolve source directory
     const sourceDir = resolveSourceDir(options.source)
     if (!sourceDir) {
       p.log.error('Source directory not found.')
@@ -140,7 +118,6 @@ export async function agentInitCommand(options: AgentInitOptions): Promise<void>
       process.exit(1)
     }
 
-    // 2. Discover assets
     const discovered = await discoverAllAssets(sourceDir)
     const totalAssets =
       discovered.commands.length + discovered.agents.length + discovered.skills.length
@@ -150,13 +127,12 @@ export async function agentInitCommand(options: AgentInitOptions): Promise<void>
       process.exit(0)
     }
 
-    // 3. Agent selection
+    // Agent selection
     let selectedAgents: AgentType[]
 
     if (options.agents) {
       selectedAgents = options.agents
     } else if (options.all) {
-      // In non-interactive mode, default to claude-code
       selectedAgents = ['claude-code']
     } else {
       const detected = await detectInstalledAgents()
@@ -181,7 +157,7 @@ export async function agentInitCommand(options: AgentInitOptions): Promise<void>
       selectedAgents = agentSelection as AgentType[]
     }
 
-    // 4. Scope selection
+    // Scope selection
     let scope: InstallScope = options.scope ?? 'project'
 
     if (!options.scope && !options.all) {
@@ -214,7 +190,7 @@ export async function agentInitCommand(options: AgentInitOptions): Promise<void>
       }
     }
 
-    // 5. Mode selection
+    // Mode selection
     let mode: InstallMode = options.mode ?? 'symlink'
 
     if (!options.mode && !options.all) {
@@ -243,33 +219,27 @@ export async function agentInitCommand(options: AgentInitOptions): Promise<void>
       mode = modeChoice as InstallMode
     }
 
-    // 6. Check for existing installations (per-agent)
+    // Check for existing installations
     if (!options.force) {
       const cwd = process.cwd()
       for (const agentType of selectedAgents) {
-        const agent = agents[agentType]
-        const agentDir =
-          scope === 'global' && agent.globalConfigDir
-            ? agent.globalConfigDir
-            : path.join(cwd, agent.configDir)
+        const agentDir = resolveAgentBaseDir(agentType, scope, cwd)
 
-        if (fs.existsSync(agentDir)) {
-          if (!options.all) {
-            const overwrite = await p.confirm({
-              message: `${agent.displayName} directory already exists at ${agentDir}. Overwrite?`,
-              initialValue: false,
-            })
+        if (fs.existsSync(agentDir) && !options.all) {
+          const overwrite = await p.confirm({
+            message: `${agents[agentType].displayName} directory already exists at ${agentDir}. Overwrite?`,
+            initialValue: false,
+          })
 
-            if (p.isCancel(overwrite) || !overwrite) {
-              p.cancel('Operation cancelled.')
-              process.exit(0)
-            }
+          if (p.isCancel(overwrite) || !overwrite) {
+            p.cancel('Operation cancelled.')
+            process.exit(0)
           }
         }
       }
     }
 
-    // 7. Category selection
+    // Category selection
     let selectedCategories: string[]
 
     if (options.all) {
@@ -321,44 +291,41 @@ export async function agentInitCommand(options: AgentInitOptions): Promise<void>
       }
     }
 
-    // 8. Per-category asset selection (interactive)
+    // Per-category asset selection
     const assetsToInstall: Asset[] = []
+    const assetCategories = ['commands', 'agents', 'skills'] as const
 
-    if (!options.all) {
-      for (const category of ['commands', 'agents', 'skills'] as const) {
-        if (!selectedCategories.includes(category)) continue
-        const categoryAssets = discovered[category]
-        if (categoryAssets.length === 0) continue
+    for (const category of assetCategories) {
+      if (!selectedCategories.includes(category)) continue
+      const categoryAssets = discovered[category]
+      if (categoryAssets.length === 0) continue
 
-        const assetSelection = await p.multiselect({
-          message: `Select ${category} to install:`,
-          options: categoryAssets.map(asset => ({
-            value: asset.name,
-            label: asset.name,
-            hint: asset.description || undefined,
-          })),
-          initialValues: categoryAssets.map(a => a.name),
-          required: false,
-        })
-
-        if (p.isCancel(assetSelection)) {
-          p.cancel('Operation cancelled.')
-          process.exit(0)
-        }
-
-        const selectedNames = new Set(assetSelection as string[])
-        assetsToInstall.push(...categoryAssets.filter(a => selectedNames.has(a.name)))
+      if (options.all) {
+        assetsToInstall.push(...categoryAssets)
+        continue
       }
-    } else {
-      // Non-interactive: add all assets from selected categories
-      for (const category of ['commands', 'agents', 'skills'] as const) {
-        if (selectedCategories.includes(category)) {
-          assetsToInstall.push(...discovered[category])
-        }
+
+      const assetSelection = await p.multiselect({
+        message: `Select ${category} to install:`,
+        options: categoryAssets.map(asset => ({
+          value: asset.name,
+          label: asset.name,
+          hint: asset.description || undefined,
+        })),
+        initialValues: categoryAssets.map(a => a.name),
+        required: false,
+      })
+
+      if (p.isCancel(assetSelection)) {
+        p.cancel('Operation cancelled.')
+        process.exit(0)
       }
+
+      const selectedNames = new Set(assetSelection as string[])
+      assetsToInstall.push(...categoryAssets.filter(a => selectedNames.has(a.name)))
     }
 
-    // 9. Settings configuration
+    // Settings configuration
     let maxThinkingTokens = options.maxThinkingTokens
 
     if (selectedCategories.includes('settings')) {
@@ -386,7 +353,7 @@ export async function agentInitCommand(options: AgentInitOptions): Promise<void>
       }
     }
 
-    // 10. Installation loop
+    // Install assets
     const cwd = process.cwd()
     let totalInstalled = 0
     let totalFailed = 0
@@ -397,11 +364,7 @@ export async function agentInitCommand(options: AgentInitOptions): Promise<void>
 
     for (const asset of assetsToInstall) {
       for (const agentType of selectedAgents) {
-        const result = await installAssetForAgent(asset, agentType, {
-          scope,
-          cwd,
-          mode,
-        })
+        const result = await installAssetForAgent(asset, agentType, { scope, cwd, mode })
 
         if (result.success) {
           totalInstalled++
@@ -419,20 +382,19 @@ export async function agentInitCommand(options: AgentInitOptions): Promise<void>
 
     s.stop('Installation complete.')
 
-    // 11. Settings installation (per-agent)
     if (selectedCategories.includes('settings')) {
       await installSettings(sourceDir, selectedAgents, scope, cwd, maxThinkingTokens!)
     }
 
-    // 12. Gitignore updates (per-agent)
-    for (const agentType of selectedAgents) {
-      const agent = agents[agentType]
-      if (scope === 'project') {
+    // Gitignore updates
+    if (scope === 'project') {
+      for (const agentType of selectedAgents) {
+        const agent = agents[agentType]
         ensureGitignoreEntry(cwd, `${agent.configDir}/settings.local.json`, agent.displayName)
       }
     }
 
-    // 13. Summary
+    // Summary
     if (symlinkWarnings.length > 0) {
       p.log.warn('Symlink warnings:')
       for (const warning of symlinkWarnings) {

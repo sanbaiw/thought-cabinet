@@ -40,32 +40,24 @@ export interface Asset {
 /** Result of an installation operation */
 export interface InstallResult {
   success: boolean
-  /** Path where the asset was installed (agent-specific location) */
   path: string
-  /** Path to canonical storage (if symlink mode) */
+  /** Path to canonical storage (symlink mode only) */
   canonicalPath?: string
-  /** Which mode was used */
   mode: InstallMode
   /** True if symlink was attempted but fell back to copy */
   symlinkFailed?: boolean
-  /** Error message if installation failed */
   error?: string
 }
 
-/** Options for the agent init command (will be used in Plan 2) */
+/** Options for the agent init command */
 export interface AgentInitOptions {
-  /** Target agents to install to */
   agents?: AgentType[]
-  /** Installation scope */
   scope?: InstallScope
-  /** Installation mode */
   mode?: InstallMode
-  /** Force overwrite existing installations */
   force?: boolean
-  /** Non-interactive mode - install all assets */
+  /** Install all assets without prompting */
   all?: boolean
-  /** Max thinking tokens for settings */
   maxThinkingTokens?: number
-  /** Source path to install from (defaults to bundled assets) */
+  /** Source path for assets (defaults to bundled assets) */
   source?: string
 }

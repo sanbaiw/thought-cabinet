@@ -19,7 +19,6 @@ export function agentCommand(program: Command): void {
       parseInt(value, 10),
     )
     .action(async options => {
-      // Validate agent types
       const agentTypes: AgentType[] | undefined = options.agent?.map((a: string) => {
         if (!isValidAgentType(a)) {
           console.error(`Unknown agent: ${a}`)
@@ -28,7 +27,6 @@ export function agentCommand(program: Command): void {
         return a as AgentType
       })
 
-      // Validate mode
       let mode: InstallMode | undefined
       if (options.mode) {
         if (options.mode !== 'symlink' && options.mode !== 'copy') {

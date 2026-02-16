@@ -1,14 +1,8 @@
 import { mkdir, cp, readdir, symlink as fsSymlink, lstat, rm, readlink } from 'fs/promises'
 import { join, basename, normalize, resolve, sep, relative, dirname } from 'path'
 import { homedir, platform } from 'os'
-import type {
-  AgentType,
-  Asset,
-  AssetCategory,
-  InstallMode,
-  InstallResult,
-  InstallScope,
-} from './types.js'
+import type { AgentType, Asset, InstallMode, InstallResult, InstallScope } from './types.js'
+import type { AssetCategory } from './constants.js'
 import { agents } from './registry.js'
 import { AGENTS_DIR, CATEGORY_SUBDIRS } from './constants.js'
 
@@ -53,7 +47,7 @@ async function cleanAndCreateDirectory(dirPath: string): Promise<void> {
   try {
     await rm(dirPath, { recursive: true, force: true })
   } catch {
-    // Ignore cleanup errors
+    // Ignore: directory may not exist
   }
   await mkdir(dirPath, { recursive: true })
 }
@@ -67,28 +61,28 @@ async function createSymlink(target: string, linkPath: string): Promise<boolean>
       return true
     }
 
-    // Handle existing entry at link path
+    // Remove existing entry at link path if present
     try {
       const stats = await lstat(linkPath)
       if (stats.isSymbolicLink()) {
         const existingTarget = await readlink(linkPath)
         const resolvedExisting = resolve(dirname(linkPath), existingTarget)
         if (resolvedExisting === resolvedTarget) {
-          return true // Already points to the right place
+          return true
         }
         await rm(linkPath)
       } else {
         await rm(linkPath, { recursive: true })
       }
     } catch (err: unknown) {
-      if (err && typeof err === 'object' && 'code' in err && err.code === 'ELOOP') {
+      const code = err && typeof err === 'object' && 'code' in err ? err.code : undefined
+      if (code === 'ELOOP') {
         try {
           await rm(linkPath, { force: true })
         } catch {
-          // Will fail at symlink creation and trigger copy fallback
+          // Will fail at symlink creation below and trigger copy fallback
         }
       }
-      // ENOENT or other: continue
     }
 
     const linkDir = dirname(linkPath)
@@ -107,10 +101,8 @@ const EXCLUDE_FILES = new Set(['README.md', 'metadata.json'])
 const EXCLUDE_DIRS = new Set(['.git'])
 
 function isExcluded(name: string, isDirectory: boolean): boolean {
-  if (EXCLUDE_FILES.has(name)) return true
   if (name.startsWith('_')) return true
-  if (isDirectory && EXCLUDE_DIRS.has(name)) return true
-  return false
+  return isDirectory ? EXCLUDE_DIRS.has(name) : EXCLUDE_FILES.has(name)
 }
 
 async function copyDirectoryContents(src: string, dest: string): Promise<void> {
@@ -142,7 +134,6 @@ export async function installAssetForAgent(
   const cwd = options.cwd || process.cwd()
   const installMode = options.mode ?? 'symlink'
 
-  // Check global support
   if (scope === 'global' && agent.globalConfigDir === undefined) {
     return {
       success: false,
@@ -159,7 +150,7 @@ export async function installAssetForAgent(
   const agentBase = getAgentDir(agentType, asset.category, scope, cwd)
   const agentDir = join(agentBase, assetName)
 
-  // Validate paths
+  // Guard against path traversal
   if (!isPathSafe(canonicalBase, canonicalDir) || !isPathSafe(agentBase, agentDir)) {
     return {
       success: false,
@@ -170,12 +161,10 @@ export async function installAssetForAgent(
   }
 
   try {
-    // Determine copy strategy based on asset type
     const copyAsset = async (targetDir: string) => {
       if (asset.isDirectory) {
         await copyDirectoryContents(asset.sourcePath, targetDir)
       } else {
-        // Single file: copy into the target directory
         await mkdir(targetDir, { recursive: true })
         const fileName = basename(asset.sourcePath)
         await cp(asset.sourcePath, join(targetDir, fileName), { dereference: true })
@@ -188,14 +177,13 @@ export async function installAssetForAgent(
       return { success: true, path: agentDir, mode: 'copy' }
     }
 
-    // Symlink mode
+    // Symlink mode: copy to canonical dir, then symlink agent dir to it
     await cleanAndCreateDirectory(canonicalDir)
     await copyAsset(canonicalDir)
 
     const symlinkCreated = await createSymlink(canonicalDir, agentDir)
 
     if (!symlinkCreated) {
-      // Fallback to copy
       await cleanAndCreateDirectory(agentDir)
       await copyAsset(agentDir)
       return {
