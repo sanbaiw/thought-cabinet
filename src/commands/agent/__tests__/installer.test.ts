@@ -19,7 +19,7 @@ describe('installer', () => {
   describe('getCanonicalDir', () => {
     it('should return project-level canonical dir', () => {
       const dir = getCanonicalDir('skills', 'project', tempDir)
-      expect(dir).toBe(join(tempDir, '.agents', 'skills'))
+      expect(dir).toBe(join(tempDir, '.thought-cabinet', 'skills'))
     })
   })
 

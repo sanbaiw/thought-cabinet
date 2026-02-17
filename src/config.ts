@@ -98,7 +98,11 @@ export function saveConfigFile(config: ConfigFile, configFile?: string): void {
   console.log(chalk.green('Config saved successfully'))
 }
 
-export function getDefaultConfigPath(): string {
+export function getDefaultConfigDir(): string {
   const xdgConfigHome = process.env.XDG_CONFIG_HOME || path.join(process.env.HOME || '', '.config')
-  return path.join(xdgConfigHome, 'thought-cabinet', ConfigResolver.DEFAULT_CONFIG_FILE)
+  return path.join(xdgConfigHome, 'thought-cabinet')
+}
+
+export function getDefaultConfigPath(): string {
+  return path.join(getDefaultConfigDir(), ConfigResolver.DEFAULT_CONFIG_FILE)
 }

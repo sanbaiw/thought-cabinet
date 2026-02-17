@@ -1,10 +1,11 @@
 import { mkdir, cp, readdir, symlink as fsSymlink, lstat, rm, readlink } from 'fs/promises'
 import { join, basename, normalize, resolve, sep, relative, dirname } from 'path'
-import { homedir, platform } from 'os'
+import { platform } from 'os'
 import type { AgentType, Asset, InstallMode, InstallResult, InstallScope } from './types.js'
 import type { AssetCategory } from './constants.js'
 import { agents } from './registry.js'
-import { AGENTS_DIR, CATEGORY_SUBDIRS } from './constants.js'
+import { CATEGORY_SUBDIRS } from './constants.js'
+import { getDefaultConfigDir } from '../../config.js'
 
 export function sanitizeName(name: string): string {
   const sanitized = name
@@ -25,8 +26,9 @@ export function getCanonicalDir(
   scope: InstallScope,
   cwd?: string,
 ): string {
-  const baseDir = scope === 'global' ? homedir() : cwd || process.cwd()
-  return join(baseDir, AGENTS_DIR, CATEGORY_SUBDIRS[category])
+  const baseDir =
+    scope === 'global' ? getDefaultConfigDir() : join(cwd || process.cwd(), '.thought-cabinet')
+  return join(baseDir, CATEGORY_SUBDIRS[category])
 }
 
 export function getAgentDir(
