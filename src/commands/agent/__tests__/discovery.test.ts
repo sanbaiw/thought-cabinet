@@ -179,11 +179,6 @@ describe('discoverAllAssets', () => {
   })
 
   it('should discover all asset categories', async () => {
-    // Create commands
-    const commandsDir = join(tempDir, 'commands')
-    await mkdir(commandsDir, { recursive: true })
-    await writeFile(join(commandsDir, 'commit.md'), '# Commit')
-
     // Create agents
     const agentsDir = join(tempDir, 'agents')
     await mkdir(agentsDir, { recursive: true })
@@ -198,14 +193,12 @@ describe('discoverAllAssets', () => {
     )
 
     const result = await discoverAllAssets(tempDir)
-    expect(result.commands).toHaveLength(1)
     expect(result.agents).toHaveLength(1)
     expect(result.skills).toHaveLength(1)
   })
 
   it('should handle missing category directories gracefully', async () => {
     const result = await discoverAllAssets(tempDir)
-    expect(result.commands).toEqual([])
     expect(result.agents).toEqual([])
     expect(result.skills).toEqual([])
   })

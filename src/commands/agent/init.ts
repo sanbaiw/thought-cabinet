@@ -28,73 +28,12 @@ function resolveSourceDir(customSource?: string): string | null {
   return candidates.find(p => fs.existsSync(p)) ?? null
 }
 
-function ensureGitignoreEntry(targetDir: string, entry: string, label: string): void {
-  const gitignorePath = path.join(targetDir, '.gitignore')
-  const existing = fs.existsSync(gitignorePath) ? fs.readFileSync(gitignorePath, 'utf8') : ''
-
-  if (existing.split('\n').some(line => line.trim() === entry)) {
-    return
-  }
-
-  const separator = existing && !existing.endsWith('\n') ? '\n' : ''
-  const block = `\n# ${label} local settings\n${entry}\n`
-  fs.writeFileSync(gitignorePath, existing + separator + block)
-}
-
 /** Resolve the agent's config directory based on scope */
 function resolveAgentBaseDir(agentType: AgentType, scope: InstallScope, cwd: string): string {
   const agent = agents[agentType]
   return scope === 'global' && agent.globalConfigDir
     ? agent.globalConfigDir
     : path.join(cwd, agent.configDir)
-}
-
-/** Agent-specific environment variables for settings */
-const AGENT_ENV_VARS: Partial<Record<AgentType, Record<string, string>>> = {
-  'claude-code': {
-    CLAUDE_BASH_MAINTAIN_WORKING_DIR: '1',
-  },
-  codebuddy: {
-    CODEBUDDY_BASH_MAINTAIN_PROJECT_WORKING_DIR: '1',
-  },
-}
-
-async function installSettings(
-  sourceDir: string,
-  agentTypes: AgentType[],
-  scope: InstallScope,
-  cwd: string,
-  maxThinkingTokens: number,
-): Promise<void> {
-  const settingsPath = path.join(sourceDir, 'settings.template.json')
-  if (!fs.existsSync(settingsPath)) {
-    p.log.warn('settings.template.json not found in source, skipping settings')
-    return
-  }
-
-  const settingsContent = fs.readFileSync(settingsPath, 'utf8')
-  const baseSettings = JSON.parse(settingsContent)
-
-  for (const agentType of agentTypes) {
-    const agent = agents[agentType]
-    const settings = JSON.parse(JSON.stringify(baseSettings)) // deep clone
-
-    if (!settings.env) settings.env = {}
-    settings.env.MAX_THINKING_TOKENS = maxThinkingTokens.toString()
-
-    const agentEnv = AGENT_ENV_VARS[agentType]
-    if (agentEnv) {
-      Object.assign(settings.env, agentEnv)
-    }
-
-    const agentBase = resolveAgentBaseDir(agentType, scope, cwd)
-    fs.mkdirSync(agentBase, { recursive: true })
-    fs.writeFileSync(
-      path.join(agentBase, 'settings.json'),
-      JSON.stringify(settings, null, 2) + '\n',
-    )
-    p.log.success(`Settings installed for ${agent.displayName}`)
-  }
 }
 
 export async function agentInitCommand(options: AgentInitOptions): Promise<void> {
@@ -119,8 +58,7 @@ export async function agentInitCommand(options: AgentInitOptions): Promise<void>
     }
 
     const discovered = await discoverAllAssets(sourceDir)
-    const totalAssets =
-      discovered.commands.length + discovered.agents.length + discovered.skills.length
+    const totalAssets = discovered.agents.length + discovered.skills.length
 
     if (totalAssets === 0) {
       p.log.warn(`No assets found in ${sourceDir}`)
@@ -243,7 +181,7 @@ export async function agentInitCommand(options: AgentInitOptions): Promise<void>
     let selectedCategories: string[]
 
     if (options.all) {
-      selectedCategories = ['commands', 'agents', 'skills', 'settings']
+      selectedCategories = ['agents', 'skills']
     } else {
       p.note(
         'Use ↑/↓ to move, Space to select/deselect, A to toggle all, Enter to confirm.',
@@ -254,11 +192,6 @@ export async function agentInitCommand(options: AgentInitOptions): Promise<void>
         message: 'What would you like to install?',
         options: [
           {
-            value: 'commands',
-            label: 'Commands',
-            hint: `${discovered.commands.length} workflow commands`,
-          },
-          {
             value: 'agents',
             label: 'Agents',
             hint: `${discovered.agents.length} specialized sub-agents`,
@@ -268,13 +201,8 @@ export async function agentInitCommand(options: AgentInitOptions): Promise<void>
             label: 'Skills',
             hint: `${discovered.skills.length} skill packages`,
           },
-          {
-            value: 'settings',
-            label: 'Settings',
-            hint: 'Project permissions configuration',
-          },
         ],
-        initialValues: ['commands', 'agents', 'skills', 'settings'],
+        initialValues: ['agents', 'skills'],
         required: false,
       })
 
@@ -293,7 +221,7 @@ export async function agentInitCommand(options: AgentInitOptions): Promise<void>
 
     // Per-category asset selection
     const assetsToInstall: Asset[] = []
-    const assetCategories = ['commands', 'agents', 'skills'] as const
+    const assetCategories = ['agents', 'skills'] as const
 
     for (const category of assetCategories) {
       if (!selectedCategories.includes(category)) continue
@@ -325,34 +253,6 @@ export async function agentInitCommand(options: AgentInitOptions): Promise<void>
       assetsToInstall.push(...categoryAssets.filter(a => selectedNames.has(a.name)))
     }
 
-    // Settings configuration
-    let maxThinkingTokens = options.maxThinkingTokens
-
-    if (selectedCategories.includes('settings')) {
-      if (!options.all && maxThinkingTokens === undefined) {
-        const tokensPrompt = await p.text({
-          message: 'Maximum thinking tokens:',
-          initialValue: '32000',
-          validate: value => {
-            const num = parseInt(value, 10)
-            if (isNaN(num) || num < 1000) {
-              return 'Please enter a valid number (minimum 1000)'
-            }
-            return undefined
-          },
-        })
-
-        if (p.isCancel(tokensPrompt)) {
-          p.cancel('Operation cancelled.')
-          process.exit(0)
-        }
-
-        maxThinkingTokens = parseInt(tokensPrompt as string, 10)
-      } else if (maxThinkingTokens === undefined) {
-        maxThinkingTokens = 32000
-      }
-    }
-
     // Install assets
     const cwd = process.cwd()
     let totalInstalled = 0
@@ -381,18 +281,6 @@ export async function agentInitCommand(options: AgentInitOptions): Promise<void>
     }
 
     s.stop('Installation complete.')
-
-    if (selectedCategories.includes('settings')) {
-      await installSettings(sourceDir, selectedAgents, scope, cwd, maxThinkingTokens!)
-    }
-
-    // Gitignore updates
-    if (scope === 'project') {
-      for (const agentType of selectedAgents) {
-        const agent = agents[agentType]
-        ensureGitignoreEntry(cwd, `${agent.configDir}/settings.local.json`, agent.displayName)
-      }
-    }
 
     // Summary
     if (symlinkWarnings.length > 0) {

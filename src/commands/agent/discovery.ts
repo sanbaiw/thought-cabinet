@@ -106,17 +106,15 @@ export async function discoverMarkdownAssets(
   return assets
 }
 
-/** Discover all assets from a source directory (expected layout: commands/, agents/, skills/) */
+/** Discover all assets from a source directory (expected layout: agents/, skills/) */
 export async function discoverAllAssets(sourcePath: string): Promise<{
-  commands: Asset[]
   agents: Asset[]
   skills: Asset[]
 }> {
-  const [commands, agents, skills] = await Promise.all([
-    discoverMarkdownAssets(join(sourcePath, 'commands'), 'commands'),
+  const [agents, skills] = await Promise.all([
     discoverMarkdownAssets(join(sourcePath, 'agents'), 'agents'),
     discoverSkills(join(sourcePath, 'skills')),
   ])
 
-  return { commands, agents, skills }
+  return { agents, skills }
 }

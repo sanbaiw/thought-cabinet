@@ -15,9 +15,6 @@ export function agentCommand(program: Command): void {
     .option('--source <path>', 'Source directory for assets')
     .option('--force', 'Force overwrite of existing installations')
     .option('--all', 'Install all assets without prompting')
-    .option('--max-thinking-tokens <number>', 'Maximum thinking tokens (default: 32000)', value =>
-      parseInt(value, 10),
-    )
     .action(async options => {
       const agentTypes: AgentType[] | undefined = options.agent?.map((a: string) => {
         if (!isValidAgentType(a)) {
@@ -43,7 +40,6 @@ export function agentCommand(program: Command): void {
         source: options.source,
         force: options.force,
         all: options.all,
-        maxThinkingTokens: options.maxThinkingTokens,
       })
     })
 }
