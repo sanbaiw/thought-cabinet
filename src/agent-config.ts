@@ -23,48 +23,48 @@ export interface CopyAgentConfigResult {
 
 /**
  * Detect which agent config directories exist in the source directory.
- * Scans for all configDir values from the agent registry.
+ * Scans for unique configDir values from the agent registry.
  */
 function detectAgentConfigDirs(sourceDir: string): string[] {
-  const seen = new Set<string>()
-  const result: string[] = []
-
-  for (const agent of Object.values(agents)) {
-    const dirName = agent.configDir
-    if (seen.has(dirName)) continue
-    seen.add(dirName)
-
-    if (fs.existsSync(path.join(sourceDir, dirName))) {
-      result.push(dirName)
-    }
-  }
-
-  return result
+  const uniqueDirs = [...new Set(Object.values(agents).map(a => a.configDir))]
+  return uniqueDirs.filter(dir => fs.existsSync(path.join(sourceDir, dir)))
 }
 
 /**
- * Check if a path is a symlink pointing into .thought-cabinet/
- * Returns the relative symlink target if true, null otherwise.
+ * Check if a path is a symlink pointing into the canonical directory.
+ * Returns the relative path within canonical storage if true, null otherwise.
  */
 function getCanonicalSymlinkTarget(entryPath: string, canonicalDir: string): string | null {
   try {
-    const stats = fs.lstatSync(entryPath)
-    if (!stats.isSymbolicLink()) return null
+    if (!fs.lstatSync(entryPath).isSymbolicLink()) return null
 
     const linkTarget = fs.readlinkSync(entryPath)
     const resolvedTarget = path.resolve(path.dirname(entryPath), linkTarget)
     const resolvedCanonical = path.resolve(canonicalDir)
 
-    if (
-      resolvedTarget.startsWith(resolvedCanonical + path.sep) ||
-      resolvedTarget === resolvedCanonical
-    ) {
-      return path.relative(resolvedCanonical, resolvedTarget)
-    }
+    const isInsideCanonical =
+      resolvedTarget === resolvedCanonical ||
+      resolvedTarget.startsWith(resolvedCanonical + path.sep)
 
-    return null
+    return isInsideCanonical ? path.relative(resolvedCanonical, resolvedTarget) : null
   } catch {
     return null
+  }
+}
+
+/**
+ * Create a symlink at destPath, falling back to a dereferenced copy on failure.
+ * Silently skips if both the symlink and copy fail (e.g. broken source symlink).
+ */
+function symlinkOrCopy(srcPath: string, destPath: string, linkTarget: string): void {
+  try {
+    fs.symlinkSync(linkTarget, destPath)
+  } catch {
+    try {
+      fs.cpSync(srcPath, destPath, { recursive: true, dereference: true })
+    } catch {
+      // Skip — source symlink may be broken
+    }
   }
 }
 
@@ -80,43 +80,19 @@ function copyDirWithSymlinkHandling(
 ): void {
   fs.mkdirSync(destDir, { recursive: true })
 
-  const entries = fs.readdirSync(srcDir, { withFileTypes: true })
-
-  for (const entry of entries) {
+  for (const entry of fs.readdirSync(srcDir, { withFileTypes: true })) {
     const srcPath = path.join(srcDir, entry.name)
     const destPath = path.join(destDir, entry.name)
 
-    // Check if this is a symlink into canonical storage
     const canonicalRelPath = getCanonicalSymlinkTarget(srcPath, sourceCanonicalDir)
 
     if (canonicalRelPath !== null) {
       // Recreate symlink pointing to target's canonical storage
       const newTarget = path.join(targetCanonicalDir, canonicalRelPath)
-      const relativePath = path.relative(path.dirname(destPath), newTarget)
-      try {
-        fs.symlinkSync(relativePath, destPath)
-      } catch {
-        // Fallback: copy the dereferenced content
-        try {
-          fs.cpSync(srcPath, destPath, { recursive: true, dereference: true })
-        } catch {
-          // Skip if source symlink is already broken
-        }
-      }
+      symlinkOrCopy(srcPath, destPath, path.relative(path.dirname(destPath), newTarget))
     } else if (entry.isSymbolicLink()) {
-      // Symlink NOT pointing into canonical storage (e.g., global install)
-      // Preserve the original relative symlink target
-      try {
-        const linkTarget = fs.readlinkSync(srcPath)
-        fs.symlinkSync(linkTarget, destPath)
-      } catch {
-        // Fallback: try dereferencing
-        try {
-          fs.cpSync(srcPath, destPath, { recursive: true, dereference: true })
-        } catch {
-          // Skip broken symlinks
-        }
-      }
+      // Non-canonical symlink (e.g. global install) — preserve original target
+      symlinkOrCopy(srcPath, destPath, fs.readlinkSync(srcPath))
     } else if (entry.isDirectory()) {
       copyDirWithSymlinkHandling(srcPath, destPath, sourceCanonicalDir, targetCanonicalDir)
     } else {
@@ -142,22 +118,21 @@ export function copyAgentConfigDirs(options: CopyAgentConfigOptions): CopyAgentC
   const sourceCanonicalDir = path.join(sourceDir, CANONICAL_DIR)
   const targetCanonicalDir = path.join(targetDir, CANONICAL_DIR)
 
-  // Step 1: Copy canonical storage (.thought-cabinet/)
-  let canonicalCopied = false
-  if (fs.existsSync(sourceCanonicalDir)) {
+  // Copy canonical storage (.thought-cabinet/)
+  const canonicalCopied = fs.existsSync(sourceCanonicalDir)
+  if (canonicalCopied) {
     fs.cpSync(sourceCanonicalDir, targetCanonicalDir, { recursive: true })
-    canonicalCopied = true
   }
 
-  // Step 2: Detect and copy agent config directories
-  const configDirs = detectAgentConfigDirs(sourceDir)
-
-  for (const dirName of configDirs) {
-    const sourcePath = path.join(sourceDir, dirName)
-    const targetPath = path.join(targetDir, dirName)
-
+  // Detect and copy agent config directories
+  for (const dirName of detectAgentConfigDirs(sourceDir)) {
     try {
-      copyDirWithSymlinkHandling(sourcePath, targetPath, sourceCanonicalDir, targetCanonicalDir)
+      copyDirWithSymlinkHandling(
+        path.join(sourceDir, dirName),
+        path.join(targetDir, dirName),
+        sourceCanonicalDir,
+        targetCanonicalDir,
+      )
       copied.push(dirName)
     } catch {
       skipped.push(dirName)
