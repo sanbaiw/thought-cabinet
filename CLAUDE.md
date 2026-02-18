@@ -98,6 +98,31 @@ When initialized in a repo, creates `thoughts/` with symlinks:
 3. Verify hook execution in output
 4. Check environment variables passed correctly
 
+## Keeping Docs in Sync with CLI Changes
+
+When CLI commands change (new flags, renamed options, removed features), these files must be updated:
+
+### Shell Completion (`src/completion/handler.ts`)
+
+- `OPTIONS` dict: maps command keys (e.g. `'agent init'`) to their CLI flags
+- `DYNAMIC_OPTIONS` dict: maps flags that accept dynamic values to provider functions (e.g. `'--agent': getAgentNames`)
+- `DYNAMIC_ARGS` dict: maps commands that accept positional dynamic args to providers
+
+### Shell Completion Providers (`src/completion/providers.ts`)
+
+- Provider functions return string arrays for dynamic completion values
+- Must stay in sync with the source of truth (e.g. `getAgentNames()` must match agent types in `src/commands/agent/registry.ts`)
+
+### README (`README.md`)
+
+- "Installing Agent Configuration" section: describes what `thc agent init` installs and its options
+- "CLI Commands > Agent Configuration" section: quick-reference for `agent init` flags
+- Keep both sections consistent with the actual Commander.js option definitions in `src/commands/agent.ts`
+
+### General rule
+
+The source of truth for CLI options is the Commander.js command definition (e.g. `src/commands/agent.ts`). Completion and README are downstream consumers that must mirror it.
+
 ## TypeScript Configuration
 
 - ESM modules (`"type": "module"`)
