@@ -20,7 +20,7 @@
     "lint": "eslint . --ext .ts",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "prepublish": "npm run clean && npm run build",
+    "prepublishOnly": "npm run clean && npm run build",
     "test": "vitest run --passWithNoTests",
     "check": "npm run format:check && npm run lint && npm run test && npm run build",
     "clean": "rm -rf dist/"
@@ -33,8 +33,9 @@
     "tabtab": "^3.0.2"
   },
   "devDependencies": {
-    "@types/tabtab": "^3.0.4",
+    "@changesets/cli": "^2.29.8",
     "@types/node": "^22.15.21",
+    "@types/tabtab": "^3.0.4",
     "@typescript-eslint/eslint-plugin": "^8.32.1",
     "@typescript-eslint/parser": "^8.32.1",
     "eslint": "^8.57.0",
@@ -54,5 +55,9 @@
     "notes",
     "documentation"
   ],
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org"
+  },
   "license": "Apache-2.0"
 }
