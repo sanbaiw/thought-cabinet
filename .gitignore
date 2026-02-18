@@ -35,3 +35,8 @@ npm-debug.log*
 
 # Thought Cabinet
 .thought-cabinet/hooks.json
+.thought-cabinet/skills/
+.thought-cabinet/agents/
+
+# Claude Code local settings
+.claude/settings.local.json
