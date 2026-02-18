@@ -66,8 +66,8 @@ export function getBranchNames(): string[] {
 }
 
 /**
- * Get list of agent names
+ * Get list of agent type names for completion
  */
 export function getAgentNames(): string[] {
-  return ['claude', 'codebuddy']
+  return ['claude-code', 'codebuddy', 'cursor', 'codex', 'gemini-cli', 'cline']
 }

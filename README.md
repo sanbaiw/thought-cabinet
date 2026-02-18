@@ -69,20 +69,12 @@ cd your-project
 thc agent init
 ```
 
-This interactively installs to `.claude/`:
+This interactively discovers and installs assets to your agent's config directory (e.g. `.claude/`):
 
-- **Commands** - Slash commands for workflow phases (`/research_codebase`, `/create_plan`, etc.)
 - **Agents** - Specialized sub-agents for code analysis and research
-- **Skills** - Extended capabilities like document generation
-- **Settings** - Project permissions and configuration
+- **Skills** - Extended capabilities like structured workflows and document generation
 
-Options:
-
-```bash
-thc agent init --all              # Copy all files without prompting
-thc agent init --force            # Overwrite existing .claude directory
-thc agent init --name codebuddy   # Use alternative agent (codebuddy)
-```
+Assets are installed via **symlink** by default: a canonical copy is stored in `.thought-cabinet/` (project) or `~/.config/thought-cabinet/` (global), and symlinks are created in the agent's config directory. This means updating the canonical copy updates all agents at once.
 
 ### Slash Commands
 
@@ -273,9 +265,11 @@ thc worktree merge feature-name
 ### Agent Configuration
 
 ```bash
-thc agent init            # Install Claude Code slash commands, agents, and skills
-thc agent init --all      # Install all without prompting
-thc agent init --force    # Overwrite existing configuration
+thc agent init                    # Interactively install agents and skills
+thc agent init --all              # Install all without prompting (symlink mode)
+thc agent init --force            # Overwrite existing installations
+thc agent init --agent cursor     # Install for a specific agent
+thc agent init --global           # Install to global scope
 ```
 
 ### Thoughts Management
