@@ -19,6 +19,21 @@ jobs:
           node-version: 20
           cache: npm
           registry-url: https://registry.npmjs.org
+      - name: Debug npm auth context
+        run: |
+          #region agent log
+          if [ -n "${NODE_AUTH_TOKEN:-}" ]; then
+            echo "::notice::hypothesis=H1 node_auth_token_present=true"
+          else
+            echo "::notice::hypothesis=H1 node_auth_token_present=false"
+          fi
+
+          if [ -n "${ACTIONS_ID_TOKEN_REQUEST_URL:-}" ] && [ -n "${ACTIONS_ID_TOKEN_REQUEST_TOKEN:-}" ]; then
+            echo "::notice::hypothesis=H2 oidc_runtime_available=true"
+          else
+            echo "::notice::hypothesis=H2 oidc_runtime_available=false"
+          fi
+          #endregion
       - run: npm ci
       - name: Validate version matches tag
         run: |
@@ -30,7 +45,18 @@ jobs:
           fi
       - run: npm run check
       - name: Publish to npm (Trusted Publishing)
-        run: npm publish
+        env:
+          NODE_AUTH_TOKEN: ''
+        run: |
+          #region agent log
+          if [ -n "${NODE_AUTH_TOKEN:-}" ]; then
+            echo "::error::hypothesis=H3 publish_path_has_token=true"
+            exit 1
+          else
+            echo "::notice::hypothesis=H3 publish_path_has_token=false"
+          fi
+          #endregion
+          npm publish --provenance
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
