@@ -13,12 +13,11 @@ jobs:
     name: Publish to npm
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
         with:
-          node-version: 20
-          cache: npm
-          registry-url: https://registry.npmjs.org
+          node-version: 24
+          registry-url: 'https://registry.npmjs.org'
       - run: npm ci
       - name: Validate version matches tag
         run: |
@@ -29,9 +28,8 @@ jobs:
             exit 1
           fi
       - run: npm run check
-      - run: npm publish --provenance --access public
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+      - name: Publish to npm (Trusted Publishing)
+        run: NODE_AUTH_TOKEN="" npm publish
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
