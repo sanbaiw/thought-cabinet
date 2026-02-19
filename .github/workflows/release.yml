@@ -29,6 +29,8 @@ jobs:
             exit 1
           fi
       - run: npm run check
+      - name: Verify npm auth identity
+        run: npm whoami
       - name: Publish to npm (Trusted Publishing)
         run: npm publish --provenance --access public
       - name: Create GitHub Release
