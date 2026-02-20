@@ -1,6 +1,6 @@
 ---
 name: validating-plan
-description: Validate implementation against plan, verify success criteria, identify issues. Use after implementing-plan to confirm execution, check success criteria, and generate validation reports. Triggers on requests like "validate the plan", "verify implementation", "/validate_plan", or after completing an implementation.
+description: Validate implementation against plan, verify success criteria, identify issues. Use after implementing-plan to confirm execution, check success criteria, and generate validation reports.
 ---
 
 # Validating Plan

@@ -1,6 +1,6 @@
 ---
 name: implementing-plan
-description: Implement technical plans from thoughts/shared/plans with verification. Use when (1) executing approved implementation plans, (2) resuming work on partially completed plans, (3) implementing phase-by-phase with verification. Triggers on requests like "implement the plan", "execute the plan", "/implement_plan", or when given a plan file path.
+description: Implement technical plans from thoughts/shared/plans with verification. Use when executing approved implementation plans, or resuming work on partially completed plans.
 ---
 
 # Implementing Plans
