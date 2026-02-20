@@ -13,7 +13,8 @@
     "dist/**/*",
     "src/agent-assets/**/*",
     ".thought-cabinet/**/*",
-    "README.md"
+    "README.md",
+    "docs/**/*"
   ],
   "scripts": {
     "build": "tsup",
