@@ -4,10 +4,19 @@ A CLI tool that gives AI coding agents persistent, structured memory through fil
 
 ## Why Thought Cabinet?
 
-- **Context limits** — Large codebases exceed model context windows. Thought Cabinet offloads research and plans to disk so the agent can read them back on demand.
-- **No persistent memory** — Agents forget between sessions. Thought Cabinet stores learnings in a git-tracked `thoughts/` directory that persists forever.
-- **Unstructured work** — Complex tasks benefit from planning before implementation. Skills guide agents through research, planning, implementation, and validation.
-- **Isolation** — AI-generated knowledge isn't easily shared. Thoughts sync via git, enabling team-wide knowledge sharing.
+AI coding agents like Claude Code are powerful but face key challenges:
+
+- **Context limits**: Large codebases exceed model context windows
+- **No persistent memory**: Agents forget learnings between sessions
+- **Unstructured work**: Complex tasks benefit from planning before implementation
+- **Isolation**: AI-generated knowledge isn't easily shared with teams
+
+Thought Cabinet solves these by providing:
+
+- **Context offloading**: Research and plans are saved to disk, freeing model context
+- **Filesystem memory**: Version-controlled thoughts persist across sessions
+- **Structured workflows**: Slash commands guide agents through research → plan → implement → validate
+- **Team sharing**: Thoughts sync via git, enabling knowledge sharing
 
 ## Quick Start
 
