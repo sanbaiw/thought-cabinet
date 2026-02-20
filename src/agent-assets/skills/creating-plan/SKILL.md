@@ -1,6 +1,6 @@
 ---
 name: creating-plan
-description: Create detailed implementation plans through interactive research and iteration. Use when (1) planning new features or changes, (2) needing to understand codebase before implementation, (3) creating technical specifications. Triggers on requests like "create a plan for", "help me plan", or "/create_plan".
+description: Create detailed implementation plans through interactive research and iteration. Use when planning new features or changes, or creating technical specifications.
 ---
 
 # Creating Implementation Plans

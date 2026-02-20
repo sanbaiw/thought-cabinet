@@ -1,6 +1,6 @@
 ---
 name: researching-codebase
-description: Document codebase as-is with thoughts directory for historical context. Use when (1) exploring how codebase features work, (2) understanding component interactions, (3) creating technical documentation of existing systems. Triggers on requests like "how does the authentication flow work?", "document the API layer", or "research how X component works".
+description: Document codebase as-is with thoughts directory for historical context. Use when exploring how codebase features work, or understanding component interactions, or creating technical documentation of existing systems.
 ---
 
 # Research Codebase
