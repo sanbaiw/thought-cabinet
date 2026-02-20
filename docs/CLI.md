@@ -14,12 +14,12 @@ thc init --profile work
 thc init --directory my-project
 ```
 
-| Flag | Description |
-|------|-------------|
-| `--force` | Force reconfiguration even if already set up |
-| `--directory <name>` | Specify the repository directory name (skips interactive prompt) |
-| `--profile <name>` | Use a specific thoughts profile |
-| `--config-file <path>` | Path to config file |
+| Flag                   | Description                                                      |
+| ---------------------- | ---------------------------------------------------------------- |
+| `--force`              | Force reconfiguration even if already set up                     |
+| `--directory <name>`   | Specify the repository directory name (skips interactive prompt) |
+| `--profile <name>`     | Use a specific thoughts profile                                  |
+| `--config-file <path>` | Path to config file                                              |
 
 ### `thc sync`
 
@@ -30,10 +30,10 @@ thc sync
 thc sync -m "Add auth research notes"
 ```
 
-| Flag | Description |
-|------|-------------|
+| Flag                      | Description             |
+| ------------------------- | ----------------------- |
 | `-m, --message <message>` | Commit message for sync |
-| `--config-file <path>` | Path to config file |
+| `--config-file <path>`    | Path to config file     |
 
 ### `thc status`
 
@@ -43,8 +43,8 @@ Show the status of the thoughts repository.
 thc status
 ```
 
-| Flag | Description |
-|------|-------------|
+| Flag                   | Description         |
+| ---------------------- | ------------------- |
 | `--config-file <path>` | Path to config file |
 
 ### `thc destroy`
@@ -56,10 +56,10 @@ thc destroy
 thc destroy --force
 ```
 
-| Flag | Description |
-|------|-------------|
-| `--force` | Force removal even if not in configuration |
-| `--config-file <path>` | Path to config file |
+| Flag                   | Description                                |
+| ---------------------- | ------------------------------------------ |
+| `--force`              | Force removal even if not in configuration |
+| `--config-file <path>` | Path to config file                        |
 
 ### `thc prune`
 
@@ -70,10 +70,10 @@ thc prune          # Dry run — shows what would be removed
 thc prune --apply  # Actually remove stale mappings
 ```
 
-| Flag | Description |
-|------|-------------|
-| `--apply` | Apply changes (default is dry-run) |
-| `--config-file <path>` | Path to config file |
+| Flag                   | Description                        |
+| ---------------------- | ---------------------------------- |
+| `--apply`              | Apply changes (default is dry-run) |
+| `--config-file <path>` | Path to config file                |
 
 ## Agent Configuration
 
@@ -93,37 +93,37 @@ thc agent init --mode copy              # Copy files instead of symlinking
 thc agent init --force                  # Overwrite existing installations
 ```
 
-| Flag | Description |
-|------|-------------|
+| Flag                   | Description                                                                                |
+| ---------------------- | ------------------------------------------------------------------------------------------ |
 | `--target <agents...>` | Target agents (e.g., `claude-code`, `codebuddy`, `cursor`, `codex`, `gemini-cli`, `cline`) |
-| `-g, --global` | Install to global scope |
-| `--mode <mode>` | Installation mode: `symlink` (default) or `copy` |
-| `--source <path>` | Source directory for assets |
-| `--force` | Force overwrite of existing installations |
-| `--all` | Install all assets without prompting |
+| `-g, --global`         | Install to global scope                                                                    |
+| `--mode <mode>`        | Installation mode: `symlink` (default) or `copy`                                           |
+| `--source <path>`      | Source directory for assets                                                                |
+| `--force`              | Force overwrite of existing installations                                                  |
+| `--all`                | Install all assets without prompting                                                       |
 
 #### Installed Skills
 
-| Skill | Slash Command | Description |
-|-------|---------------|-------------|
+| Skill                | Slash Command           | Description                                                           |
+| -------------------- | ----------------------- | --------------------------------------------------------------------- |
 | researching-codebase | `/researching-codebase` | Deep-dive into codebase, save findings to `thoughts/shared/research/` |
-| creating-plan | `/creating-plan` | Create implementation plan with phases and success criteria |
-| iterating-plan | `/iterating-plan` | Refine existing plans based on feedback |
-| implementing-plan | `/implementing-plan` | Execute plan phase-by-phase with verification |
-| validating-plan | `/validating-plan` | Verify implementation against plan's success criteria |
-| commit | `/commit` | Create git commits with clear, descriptive messages |
+| creating-plan        | `/creating-plan`        | Create implementation plan with phases and success criteria           |
+| iterating-plan       | `/iterating-plan`       | Refine existing plans based on feedback                               |
+| implementing-plan    | `/implementing-plan`    | Execute plan phase-by-phase with verification                         |
+| validating-plan      | `/validating-plan`      | Verify implementation against plan's success criteria                 |
+| commit               | `/commit`               | Create git commits with clear, descriptive messages                   |
 
 #### Installed Agents
 
-| Agent | Description |
-|-------|-------------|
-| codebase-analyzer | Analyzes codebase implementation details for specific components |
-| codebase-locator | Locates files, directories, and components relevant to a feature or task |
-| codebase-pattern-finder | Finds similar implementations, usage examples, or existing patterns |
-| code-simplifier | Simplifies and refines code for clarity and maintainability |
-| thoughts-analyzer | Deep-dives on research topics stored in thoughts |
-| thoughts-locator | Discovers relevant documents in the thoughts directory |
-| web-search-researcher | Searches the web for up-to-date information |
+| Agent                   | Description                                                              |
+| ----------------------- | ------------------------------------------------------------------------ |
+| codebase-analyzer       | Analyzes codebase implementation details for specific components         |
+| codebase-locator        | Locates files, directories, and components relevant to a feature or task |
+| codebase-pattern-finder | Finds similar implementations, usage examples, or existing patterns      |
+| code-simplifier         | Simplifies and refines code for clarity and maintainability              |
+| thoughts-analyzer       | Deep-dives on research topics stored in thoughts                         |
+| thoughts-locator        | Discovers relevant documents in the thoughts directory                   |
+| web-search-researcher   | Searches the web for up-to-date information                              |
 
 ## Worktree Management
 
@@ -133,40 +133,40 @@ See [WORKTREES.md](WORKTREES.md) for the full worktree workflow guide.
 
 Create a git worktree with a dedicated tmux session and synced thoughts.
 
-| Flag | Description |
-|------|-------------|
-| `--branch <branch>` | Branch name (defaults to `<name>`) |
-| `--base <ref>` | Base ref/commit (default: `HEAD`) |
-| `--path <path>` | Worktree directory path (default: `../<repo>__worktrees/<name>`) |
-| `--detached` | Create a detached worktree at `<base>` (no branch) |
-| `--no-thoughts` | Skip thoughts initialization |
+| Flag                | Description                                                      |
+| ------------------- | ---------------------------------------------------------------- |
+| `--branch <branch>` | Branch name (defaults to `<name>`)                               |
+| `--base <ref>`      | Base ref/commit (default: `HEAD`)                                |
+| `--path <path>`     | Worktree directory path (default: `../<repo>__worktrees/<name>`) |
+| `--detached`        | Create a detached worktree at `<base>` (no branch)               |
+| `--no-thoughts`     | Skip thoughts initialization                                     |
 
 ### `thc worktree list`
 
 List active worktrees and tmux sessions.
 
-| Flag | Description |
-|------|-------------|
+| Flag    | Description                                    |
+| ------- | ---------------------------------------------- |
 | `--all` | Show all git worktrees (not just managed ones) |
 
 ### `thc worktree merge <name>`
 
 Merge worktree branch and clean up.
 
-| Flag | Description |
-|------|-------------|
+| Flag              | Description                                                            |
+| ----------------- | ---------------------------------------------------------------------- |
 | `--into <branch>` | Target branch to merge into (default: current branch in main worktree) |
-| `--force` | Force cleanup even if uncommitted changes exist |
-| `--keep-session` | Do not kill the tmux session |
-| `--keep-worktree` | Do not remove the git worktree |
-| `--keep-branch` | Do not delete the source branch |
+| `--force`         | Force cleanup even if uncommitted changes exist                        |
+| `--keep-session`  | Do not kill the tmux session                                           |
+| `--keep-worktree` | Do not remove the git worktree                                         |
+| `--keep-branch`   | Do not delete the source branch                                        |
 
 ### `thc worktree remove <name>`
 
 Remove a worktree without merging.
 
-| Flag | Description |
-|------|-------------|
+| Flag      | Description                                                     |
+| --------- | --------------------------------------------------------------- |
 | `--force` | Force removal even with uncommitted changes or unmerged commits |
 
 ## Profiles
@@ -182,12 +182,12 @@ thc profile create work --repo ~/work-thoughts
 thc profile create personal --repo ~/personal-thoughts
 ```
 
-| Flag | Description |
-|------|-------------|
-| `--repo <path>` | Thoughts repository path |
-| `--repos-dir <name>` | Repos directory name |
-| `--global-dir <name>` | Global directory name |
-| `--config-file <path>` | Path to config file |
+| Flag                   | Description              |
+| ---------------------- | ------------------------ |
+| `--repo <path>`        | Thoughts repository path |
+| `--repos-dir <name>`   | Repos directory name     |
+| `--global-dir <name>`  | Global directory name    |
+| `--config-file <path>` | Path to config file      |
 
 ### `thc profile list`
 
@@ -198,28 +198,28 @@ thc profile list
 thc profile list --json
 ```
 
-| Flag | Description |
-|------|-------------|
-| `--json` | Output as JSON |
+| Flag                   | Description         |
+| ---------------------- | ------------------- |
+| `--json`               | Output as JSON      |
 | `--config-file <path>` | Path to config file |
 
 ### `thc profile show <name>`
 
 Show details for a specific profile.
 
-| Flag | Description |
-|------|-------------|
-| `--json` | Output as JSON |
+| Flag                   | Description         |
+| ---------------------- | ------------------- |
+| `--json`               | Output as JSON      |
 | `--config-file <path>` | Path to config file |
 
 ### `thc profile delete <name>`
 
 Delete a profile.
 
-| Flag | Description |
-|------|-------------|
-| `--force` | Force deletion even if in use |
-| `--config-file <path>` | Path to config file |
+| Flag                   | Description                   |
+| ---------------------- | ----------------------------- |
+| `--force`              | Force deletion even if in use |
+| `--config-file <path>` | Path to config file           |
 
 ## Configuration
 
@@ -233,11 +233,11 @@ thc config --edit    # Open in editor
 thc config --json    # Output as JSON
 ```
 
-| Flag | Description |
-|------|-------------|
-| `--edit` | Open configuration in editor |
-| `--json` | Output configuration as JSON |
-| `--config-file <path>` | Path to config file |
+| Flag                   | Description                  |
+| ---------------------- | ---------------------------- |
+| `--edit`               | Open configuration in editor |
+| `--json`               | Output configuration as JSON |
+| `--config-file <path>` | Path to config file          |
 
 Configuration is stored at `~/.config/thought-cabinet/config.json` (respects `XDG_CONFIG_HOME`).
 

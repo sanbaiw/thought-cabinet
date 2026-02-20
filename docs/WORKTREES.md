@@ -110,13 +110,13 @@ thc worktree add feature-name --detached
 thc worktree add feature-name --no-thoughts
 ```
 
-| Flag | Description |
-|------|-------------|
-| `--branch <branch>` | Branch name (defaults to `<name>`) |
-| `--base <ref>` | Base ref/commit (default: `HEAD`) |
-| `--path <path>` | Worktree directory path (default: `../<repo>__worktrees/<name>`) |
-| `--detached` | Create a detached worktree at `<base>` (no branch) |
-| `--no-thoughts` | Skip thoughts initialization |
+| Flag                | Description                                                      |
+| ------------------- | ---------------------------------------------------------------- |
+| `--branch <branch>` | Branch name (defaults to `<name>`)                               |
+| `--base <ref>`      | Base ref/commit (default: `HEAD`)                                |
+| `--path <path>`     | Worktree directory path (default: `../<repo>__worktrees/<name>`) |
+| `--detached`        | Create a detached worktree at `<base>` (no branch)               |
+| `--no-thoughts`     | Skip thoughts initialization                                     |
 
 ### `thc worktree list`
 
@@ -127,8 +127,8 @@ thc worktree list
 thc worktree list --all    # Show all git worktrees, not just managed ones
 ```
 
-| Flag | Description |
-|------|-------------|
+| Flag    | Description                                              |
+| ------- | -------------------------------------------------------- |
 | `--all` | Show all git worktrees (not just `../<repo>__worktrees`) |
 
 ### `thc worktree merge <name>`
@@ -141,13 +141,13 @@ thc worktree merge feature-name --into main
 thc worktree merge feature-name --keep-session --keep-branch
 ```
 
-| Flag | Description |
-|------|-------------|
+| Flag              | Description                                                            |
+| ----------------- | ---------------------------------------------------------------------- |
 | `--into <branch>` | Target branch to merge into (default: current branch in main worktree) |
-| `--force` | Force cleanup even if uncommitted changes exist |
-| `--keep-session` | Do not kill the tmux session |
-| `--keep-worktree` | Do not remove the git worktree |
-| `--keep-branch` | Do not delete the source branch |
+| `--force`         | Force cleanup even if uncommitted changes exist                        |
+| `--keep-session`  | Do not kill the tmux session                                           |
+| `--keep-worktree` | Do not remove the git worktree                                         |
+| `--keep-branch`   | Do not delete the source branch                                        |
 
 ### `thc worktree remove <name>`
 
@@ -158,6 +158,6 @@ thc worktree remove feature-name
 thc worktree remove feature-name --force
 ```
 
-| Flag | Description |
-|------|-------------|
+| Flag      | Description                                                     |
+| --------- | --------------------------------------------------------------- |
 | `--force` | Force removal even with uncommitted changes or unmerged commits |

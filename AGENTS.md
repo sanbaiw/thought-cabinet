@@ -102,6 +102,7 @@ Each agent defines: name, displayName, configDir (project-level), globalConfigDi
 ### Agent Init (`src/commands/agent/init.ts`)
 
 Interactive CLI for installing agent assets (skills, agents) to an agent's config directory. Supports:
+
 - **Scope**: `project` (repo-level) or `global` (user-level)
 - **Mode**: `symlink` (canonical storage in `.thought-cabinet/`) or `copy`
 - **Target**: `--target <agent>` flag to specify agent type

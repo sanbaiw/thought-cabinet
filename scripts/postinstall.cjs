@@ -2,9 +2,10 @@
 
 // Show completion hint after installation
 // Skip in CI environments to avoid polluting CI logs
-const isCI = process.env.CI === 'true' ||
-             process.env.CONTINUOUS_INTEGRATION === 'true' ||
-             process.env.GITHUB_ACTIONS === 'true'
+const isCI =
+  process.env.CI === 'true' ||
+  process.env.CONTINUOUS_INTEGRATION === 'true' ||
+  process.env.GITHUB_ACTIONS === 'true'
 
 if (!isCI) {
   console.log('')
