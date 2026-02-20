@@ -268,7 +268,7 @@ thc worktree merge feature-name
 thc agent init                    # Interactively install agents and skills
 thc agent init --all              # Install all without prompting (symlink mode)
 thc agent init --force            # Overwrite existing installations
-thc agent init --agent cursor     # Install for a specific agent
+thc agent init --target cursor    # Install for a specific agent
 thc agent init --global           # Install to global scope
 ```
 

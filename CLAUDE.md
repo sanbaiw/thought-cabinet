@@ -105,7 +105,7 @@ When CLI commands change (new flags, renamed options, removed features), these f
 ### Shell Completion (`src/completion/handler.ts`)
 
 - `OPTIONS` dict: maps command keys (e.g. `'agent init'`) to their CLI flags
-- `DYNAMIC_OPTIONS` dict: maps flags that accept dynamic values to provider functions (e.g. `'--agent': getAgentNames`)
+- `DYNAMIC_OPTIONS` dict: maps flags that accept dynamic values to provider functions (e.g. `'--target': getAgentNames`)
 - `DYNAMIC_ARGS` dict: maps commands that accept positional dynamic args to providers
 
 ### Shell Completion Providers (`src/completion/providers.ts`)
