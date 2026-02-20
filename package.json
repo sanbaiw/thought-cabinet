@@ -14,7 +14,8 @@
     "src/agent-assets/**/*",
     ".thought-cabinet/**/*",
     "README.md",
-    "docs/**/*"
+    "docs/**/*",
+    "scripts/postinstall.cjs"
   ],
   "scripts": {
     "build": "tsup",
@@ -22,6 +23,7 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "prepublishOnly": "npm run clean && npm run build",
+    "postinstall": "node scripts/postinstall.cjs",
     "test": "vitest run --passWithNoTests",
     "check": "npm run format:check && npm run lint && npm run test && npm run build",
     "clean": "rm -rf dist/"
