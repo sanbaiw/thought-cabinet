@@ -43,14 +43,14 @@ thc agent init
 
 Skills are installed by `thc agent init` and invoked as slash commands in your agent session:
 
-| Skill | Description |
-|-------|-------------|
+| Skill                   | Description                                                           |
+| ----------------------- | --------------------------------------------------------------------- |
 | `/researching-codebase` | Deep-dive into codebase, save findings to `thoughts/shared/research/` |
-| `/creating-plan` | Create implementation plan with phases and success criteria |
-| `/iterating-plan` | Refine existing plans based on feedback |
-| `/implementing-plan` | Execute plan phase-by-phase with verification |
-| `/validating-plan` | Verify implementation against plan's success criteria |
-| `/commit` | Create git commits with clear, descriptive messages |
+| `/creating-plan`        | Create implementation plan with phases and success criteria           |
+| `/iterating-plan`       | Refine existing plans based on feedback                               |
+| `/implementing-plan`    | Execute plan phase-by-phase with verification                         |
+| `/validating-plan`      | Verify implementation against plan's success criteria                 |
+| `/commit`               | Create git commits with clear, descriptive messages                   |
 
 **Typical workflow**: research the codebase to build understanding, create a plan, iterate until the plan is solid, implement it, then validate the result.
 
@@ -89,13 +89,13 @@ Research and plans are written to disk. The agent reads back only what it needs,
 
 ## CLI Overview
 
-| Command | Description |
-|---------|-------------|
-| `thc init` | Initialize thoughts for current repository |
-| `thc sync` | Sync thoughts to git repository |
-| `thc status` | Show thoughts repository status |
+| Command          | Description                                       |
+| ---------------- | ------------------------------------------------- |
+| `thc init`       | Initialize thoughts for current repository        |
+| `thc sync`       | Sync thoughts to git repository                   |
+| `thc status`     | Show thoughts repository status                   |
 | `thc agent init` | Install skills and agents to your AI coding agent |
-| `thc config` | View or edit configuration |
+| `thc config`     | View or edit configuration                        |
 
 See [docs/CLI.md](docs/CLI.md) for the full command reference with all flags and options.
 
