@@ -9,14 +9,14 @@ export function agentCommand(program: Command): void {
   agent
     .command('init')
     .description('Initialize coding agent configuration in current directory')
-    .option('--agent <agents...>', 'Target agents (e.g., claude-code codebuddy cursor)')
+    .option('--target <agents...>', 'Target agents (e.g., claude-code codebuddy cursor)')
     .option('-g, --global', 'Install to global scope')
     .option('--mode <mode>', 'Installation mode: symlink or copy (default: symlink)')
     .option('--source <path>', 'Source directory for assets')
     .option('--force', 'Force overwrite of existing installations')
     .option('--all', 'Install all assets without prompting')
     .action(async options => {
-      const agentTypes: AgentType[] | undefined = options.agent?.map((a: string) => {
+      const agentTypes: AgentType[] | undefined = options.target?.map((a: string) => {
         if (!isValidAgentType(a)) {
           console.error(`Unknown agent: ${a}`)
           process.exit(1)
