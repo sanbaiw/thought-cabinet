@@ -19,7 +19,7 @@
   ],
   "scripts": {
     "build": "tsup",
-    "lint": "eslint . --format ./eslint-formatter.js",
+    "lint": "eslint . --format stylish",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "prepublishOnly": "npm run clean && npm run build",
