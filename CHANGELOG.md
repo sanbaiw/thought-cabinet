@@ -1,5 +1,11 @@
 # thought-cabinet
 
+## 0.1.10
+
+### Patch Changes
+
+- dafe3f3: Migrate to ESLint v10 flat config format and resolve all npm security vulnerabilities (17 → 0)
+
 ## 0.1.9
 
 ### Patch Changes
