@@ -43,6 +43,7 @@ export function thoughtsCommand(program: Command): void {
     .command('status')
     .description('Show status of thoughts repository')
     .option('--config-file <path>', 'Path to config file')
+    .option('--fetch', 'Fetch from remote before showing status')
     .action(thoughtsStatusCommand)
 
   cmd

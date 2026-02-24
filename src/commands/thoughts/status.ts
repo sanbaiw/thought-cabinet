@@ -62,18 +62,41 @@ function getLastCommit(repoPath: string): string {
   }
 }
 
-function getRemoteStatus(repoPath: string): string {
+const STALE_FETCH_THRESHOLD_HOURS = 6
+
+function getFetchAgeMs(repoPath: string): number | null {
+  const fetchHead = path.join(repoPath, '.git', 'FETCH_HEAD')
+  try {
+    const stat = fs.statSync(fetchHead)
+    return Date.now() - stat.mtimeMs
+  } catch {
+    return null
+  }
+}
+
+function formatDuration(ms: number): string {
+  const seconds = Math.floor(ms / 1000)
+  if (seconds < 60) return `${seconds}s`
+  const minutes = Math.floor(seconds / 60)
+  if (minutes < 60) return `${minutes}m`
+  const hours = Math.floor(minutes / 60)
+  if (hours < 24) return `${hours}h`
+  const days = Math.floor(hours / 24)
+  return `${days}d`
+}
+
+function getRemoteStatus(repoPath: string, doFetch: boolean): string {
   try {
     execSync('git remote get-url origin', { cwd: repoPath, stdio: 'pipe' })
 
-    // Fetch to update remote refs
-    try {
-      execSync('git fetch', { cwd: repoPath, stdio: 'pipe' })
-    } catch {
-      // Fetch might fail, continue anyway
+    if (doFetch) {
+      try {
+        execSync('git fetch', { cwd: repoPath, stdio: 'pipe' })
+      } catch {
+        // Fetch might fail, continue anyway
+      }
     }
 
-    // Check if we're ahead/behind
     const status = execSync('git status -sb', {
       cwd: repoPath,
       encoding: 'utf8',
@@ -85,32 +108,7 @@ function getRemoteStatus(repoPath: string): string {
       return chalk.yellow(`${ahead} commits ahead of remote`)
     } else if (status.includes('behind')) {
       const behind = status.match(/behind (\d+)/)?.[1] || '?'
-
-      // Try to automatically pull if we're behind
-      try {
-        execSync('git pull --rebase', {
-          stdio: 'pipe',
-          cwd: repoPath,
-        })
-        console.log(chalk.green('✓ Automatically pulled latest changes'))
-
-        // Re-check status after pull
-        const newStatus = execSync('git status -sb', {
-          encoding: 'utf8',
-          cwd: repoPath,
-          stdio: 'pipe',
-        })
-
-        if (newStatus.includes('behind')) {
-          const newBehind = newStatus.match(/behind (\d+)/)?.[1] || '?'
-          return chalk.yellow(`${newBehind} commits behind remote (after pull)`)
-        } else {
-          return chalk.green('Up to date with remote (after pull)')
-        }
-      } catch {
-        // Silent fail - status is read-only operation
-        return chalk.yellow(`${behind} commits behind remote`)
-      }
+      return chalk.yellow(`${behind} commits behind remote`)
     } else {
       return chalk.green('Up to date with remote')
     }
@@ -121,6 +119,8 @@ function getRemoteStatus(repoPath: string): string {
 
 interface StatusOptions {
   configFile?: string
+  fetch?: boolean
+  maxAgeSecs?: string
 }
 
 export async function thoughtsStatusCommand(options: StatusOptions): Promise<void> {
@@ -184,7 +184,24 @@ export async function thoughtsStatusCommand(options: StatusOptions): Promise<voi
       console.log(chalk.gray(`  (using profile: ${profileName})`))
     }
     console.log(`  ${getGitStatus(expandedRepo)}`)
-    console.log(`  Remote: ${getRemoteStatus(expandedRepo)}`)
+
+    const doFetch = options.fetch ?? false
+    const staleThresholdMs =
+      (parseInt(options.maxAgeSecs ?? '', 10) || STALE_FETCH_THRESHOLD_HOURS * 60 * 60) * 1000
+
+    console.log(`  Remote: ${getRemoteStatus(expandedRepo, doFetch)}`)
+
+    if (!doFetch) {
+      const fetchAgeMs = getFetchAgeMs(expandedRepo)
+      if (fetchAgeMs === null) {
+        console.log(chalk.gray('    (never fetched, use --fetch to refresh)'))
+      } else if (fetchAgeMs > staleThresholdMs) {
+        console.log(
+          chalk.gray(`    (last fetched ${formatDuration(fetchAgeMs)} ago, use --fetch to refresh)`),
+        )
+      }
+    }
+
     console.log(`  Last commit: ${getLastCommit(expandedRepo)}`)
     console.log('')
 

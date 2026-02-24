@@ -31,7 +31,7 @@ const OPTIONS: Record<string, string[]> = {
   init: ['--force', '--config-file', '--directory', '--profile'],
   destroy: ['--force', '--config-file'],
   sync: ['-m', '--message', '--config-file'],
-  status: ['--config-file'],
+  status: ['--config-file', '--fetch'],
   config: ['--edit', '--json', '--config-file'],
   prune: ['--apply', '--config-file'],
   'profile create': ['--repo', '--repos-dir', '--global-dir', '--config-file'],
