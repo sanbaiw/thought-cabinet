@@ -2,4 +2,5 @@
 thoughts/
 src/agent-assets/
 src/agent-assests/
-
+.changeset/
+CHANGELOG.md
