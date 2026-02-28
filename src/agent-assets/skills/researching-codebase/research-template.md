@@ -5,7 +5,7 @@
 ```markdown
 ---
 date: [ISO 8601 datetime with timezone, e.g., 2025-01-08T14:30:00+08:00]
-researcher: [From `thoughtcabinet metadata` output]
+researcher: [From `git config user.name` - current git user]
 git_commit: [Current commit hash from metadata]
 branch: [Current branch name from metadata]
 repository: [Repository name from metadata]

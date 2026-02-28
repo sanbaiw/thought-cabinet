@@ -1,3 +1,4 @@
+
 ---
 name: researching-codebase
 description: Document codebase as-is with thoughts directory for historical context. Use when exploring how codebase features work, or understanding component interactions, or creating technical documentation of existing systems.
@@ -84,10 +85,12 @@ Create multiple Task agents to research concurrently:
 1. **Gather metadata (required)**:
    ```bash
    thoughtcabinet metadata
+   git config user.name
    ```
-   Captures: researcher name, git commit, branch, repository, timestamp
+   Captures: git commit, branch, repository, timestamp from `thoughtcabinet metadata`
+   Captures: researcher name from `git config user.name`
    - **DO NOT** use raw `git` commands for metadata unless `thoughtcabinet metadata` fails.
-
+   - **DO** use `git config user.name` for researcher name (not from thoughtcabinet metadata).
 2. **Determine filename**:
    - Path: `thoughts/shared/research/YYYY-MM-DD-description.md`
    - Description: kebab-case summary of topic
