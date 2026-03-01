@@ -194,6 +194,6 @@ When working within a plan phase:
 1. Read the phase's success criteria
 2. For each unit of work in the phase, apply the RED-GREEN-REFACTOR cycle
 3. After all units are complete, run the phase's automated verification commands
-4. Present results per verification message template
+4. Follow `implementing-plan`'s Phase Completion Checklist: update checkboxes, present the verification message, wait for user confirmation
 
 The phase's automated verification is the final gate. TDD cycles happen within that gate, not instead of it.
