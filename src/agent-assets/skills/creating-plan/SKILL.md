@@ -1,22 +1,31 @@
 ---
 name: creating-plan
-description: Create detailed implementation plans through interactive research and iteration. Use when planning new features or changes, or creating technical specifications.
+description: Create detailed implementation plans through interactive research and iteration. Use when planning new features, designing changes, writing technical specs.
 ---
 
 # Creating Implementation Plans
 
 Create detailed implementation plans through an interactive, iterative process. Be skeptical, thorough, and work collaboratively to produce high-quality technical specifications.
 
+## Workflow Context
+
+This skill produces the plan document consumed by downstream skills:
+
+1. **creating-plan** (this skill) — Research, design, write the plan
+2. `implementing-plan` — Execute the plan phase-by-phase, running build/lint/test after each phase
+3. `validating-plan` — Audit the implementation against the plan
+
+The plan file at `thoughts/shared/plans/YYYY-MM-DD-description.md` is the contract between these skills. Write success criteria knowing that `implementing-plan` will run the automated verification commands literally.
+
 ## Workflow Overview
 
-1. **Gather context** - Read provided files, research codebase
-2. **Ask clarifying questions** - Only what research couldn't answer
-3. **Discover and propose options** - Present design choices with tradeoffs
-4. **Structure the plan** - Get approval on phases before detailing
-5. **Write the plan**
-6. **Iterate** - Refine until user is satisfied
+1. **Gather context & clarify** - Research codebase, present understanding, ask only what research couldn't answer
+2. **Research & propose options** - Deeper investigation based on user input, present design choices with tradeoffs
+3. **Structure the plan** - Get approval on phases before detailing
+4. **Write the plan** - Detailed, actionable plan following the template
+5. **Iterate** - Refine until user is satisfied
 
-## Step 1: Context Gathering
+## Step 1: Gather Context & Clarify
 
 ### If Parameters Provided
 
@@ -56,13 +65,18 @@ Questions that my research couldn't answer:
 
 Only ask questions you genuinely cannot answer through code investigation.
 
-## Step 2: Research & Discovery
+## Step 2: Research & Propose Options
 
-If the user corrects any misunderstanding:
+After the user responds to Step 1 (whether confirming understanding, answering questions, or correcting misunderstandings):
+
+**If the user corrects any misunderstanding:**
 1. DO NOT just accept the correction
 2. Spawn new research tasks to verify
 3. Read the specific files/directories mentioned
 4. Only proceed once verified
+
+**If the user confirms understanding or provides answers:**
+Spawn deeper research tasks informed by the user's input to explore the solution space.
 
 ### Spawn Parallel Research Tasks
 
@@ -77,7 +91,7 @@ Use the right agent for each type:
 - `thoughts-locator` - Find research, plans, or decisions
 - `thoughts-analyzer` - Extract insights from relevant documents
 
-Wait for ALL sub-tasks to complete before proceeding.
+Wait for ALL tasks to complete before proceeding.
 
 ### Present Findings
 
@@ -101,7 +115,7 @@ Which approach aligns best with your vision?
 
 ## Step 3: Plan Structure
 
-Once aligned on approach:
+Once aligned on approach, propose the phase structure. Each phase MUST be independently verifiable — see [Phase Independence](#phase-independence) below.
 
 ```
 Here's my proposed plan structure:
@@ -126,6 +140,7 @@ After structure approval:
 1. **Determine file path**: `thoughts/shared/plans/YYYY-MM-DD-description.md`
    - YYYY-MM-DD: today's date
    - description: brief kebab-case summary
+   - If a file already exists at this path, append a numeric suffix (e.g. `-2`) or ask the user
 
 2. **Write plan** using [plan-template.md](plan-template.md)
    - **MUST** Read the template and follow the structure exactly.
@@ -135,7 +150,7 @@ After structure approval:
    thoughtcabinet sync -m "Plan: <description>"
    ```
 
-## Step 5: Review & Iterate
+## Step 5: Iterate
 
 Present the draft location:
 
@@ -151,6 +166,37 @@ Please review it and let me know:
 ```
 
 Iterate until the user is satisfied.
+
+## Phase Independence
+
+Each phase MUST be independently verifiable. `implementing-plan` runs build/lint/test and pauses for manual verification after each phase, so phases cannot have circular dependencies.
+
+**Requirements:**
+- Code must compile/build after completing each phase alone
+- If Phase N imports from Phase N+1, include stubs or reorder phases
+- Success criteria should be testable without implementing later phases
+- Ask: "Can I run build/lint/test and pause for manual verification after this phase alone?"
+
+**BAD phase structure:**
+```
+Phase 1: Create command that imports handler
+Phase 2: Create handler module
+```
+Problem: Phase 1 won't compile until Phase 2 is done.
+
+**GOOD phase structure:**
+```
+Phase 1: Create handler module with core logic
+Phase 2: Create command that imports and uses handler
+```
+Each phase compiles independently.
+
+**Alternative if imports are unavoidable:**
+```
+Phase 1: Create command with stub imports, create empty handler module with stub exports
+Phase 2: Implement handler logic
+```
+Both phases compile; Phase 1 has minimal but working functionality.
 
 ## Guidelines
 
@@ -168,7 +214,7 @@ Iterate until the user is satisfied.
 
 ### Be Thorough
 - Read all context files COMPLETELY
-- Research actual code patterns using parallel sub-tasks
+- Research actual code patterns using parallel tasks
 - Include specific file paths and line numbers
 - Write measurable success criteria
 
@@ -178,45 +224,14 @@ Iterate until the user is satisfied.
 - Think about edge cases
 - Include "what we're NOT doing"
 
-### Phase Independence
-
-Each phase must be independently verifiable. The implementing-plan workflow runs build/lint/test and pauses for manual verification after each phase, so phases cannot have circular dependencies.
-
-**Requirements:**
-- Code must compile/build after completing each phase alone
-- If Phase N imports from Phase N+1, include stubs or reorder phases
-- Success criteria should be testable without implementing later phases
-- Ask: "Can I run build/lint/test and pause for manual verification after this phase alone?"
-
-**Example of a BAD phase structure:**
-```
-Phase 1: Create command that imports handler
-Phase 2: Create handler module
-```
-Problem: Phase 1 won't compile until Phase 2 is done.
-
-**Example of a GOOD phase structure:**
-```
-Phase 1: Create handler module with core logic
-Phase 2: Create command that imports and uses handler
-```
-Each phase compiles independently.
-
-**Alternative if imports are unavoidable:**
-```
-Phase 1: Create command with stub imports, create empty handler module with stub exports
-Phase 2: Implement handler logic
-```
-Both phases compile; Phase 1 has minimal but working functionality.
-
 ### No Open Questions in Final Plan
 - If you encounter open questions, STOP
 - Research or ask for clarification immediately
 - The implementation plan must be complete and actionable
 
-## Sub-task Best Practices
+## Research Task Best Practices
 
-When spawning research sub-tasks:
+When spawning research tasks:
 
 1. **Spawn multiple tasks in parallel** for efficiency
 2. **Each task should be focused** on a specific area
