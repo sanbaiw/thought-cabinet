@@ -1,11 +1,32 @@
 ---
 name: implementing-plan
-description: Implement technical plans from thoughts/shared/plans with verification. Use when executing approved implementation plans, or resuming work on partially completed plans.
+description: Implement technical plans from thoughts/shared/plans with verification. Use when executing approved implementation plans, resuming partially completed plans, or when the user mentions execute plan or resume plan.
 ---
 
 # Implementing Plans
 
 Execute approved technical plans from `thoughts/shared/plans/` with verification at each phase.
+
+## Workflow Context
+
+This skill executes plans produced by `creating-plan`:
+
+1. `creating-plan` — Research, design, write the plan
+2. **implementing-plan** (this skill) — Execute phase-by-phase with verification
+3. `validating-plan` — Audit the implementation against the plan
+
+The plan file at `thoughts/shared/plans/` is the contract. Success criteria in the plan are executed literally — automated verification commands are run as written.
+
+### Test-Driven Implementation
+
+When `test-driven-development` is available, apply its RED-GREEN-REFACTOR cycle for each unit of work within a phase:
+
+1. Write a failing test for the next behavior (RED)
+2. Write minimal code to pass (GREEN)
+3. Refactor while keeping tests green
+4. Repeat for the next unit of work
+
+After all TDD cycles in the phase are complete, run the phase's automated verification commands as the final gate.
 
 ## Getting Started
 
@@ -59,7 +80,7 @@ After implementing a phase, follow this checklist **in order**:
 1. Run automated success criteria checks (compile, tests, etc.)
 2. Fix any issues found
 3. Update checkboxes in the plan file for completed automated verification items
-4. Update progress in todos (TodoWrite)
+4. Update progress in todo list
 5. **STOP** and present the verification message (see below)
 6. **WAIT** for user confirmation before starting next phase
 
@@ -102,7 +123,7 @@ When something isn't working as expected:
 2. Consider if the codebase evolved since the plan was written
 3. Present the mismatch clearly and ask for guidance
 
-Use sub-tasks sparingly - mainly for targeted debugging or exploring unfamiliar territory.
+Use tasks sparingly - mainly for targeted debugging or exploring unfamiliar territory.
 
 ## Guidelines
 
