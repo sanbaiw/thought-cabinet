@@ -24,7 +24,7 @@ Thought Cabinet solves these by providing:
 cd your-project
 
 # 1. Install
-npm install -g thought-cabinet
+pnpm install -g thought-cabinet
 
 # 2. Initialize thoughts in your project
 thc init
