@@ -21,9 +21,9 @@
     "lint": "eslint . --format stylish",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "prepublishOnly": "npm run clean && npm run build",
+    "prepublishOnly": "pnpm run clean && pnpm run build",
     "test": "vitest run --passWithNoTests",
-    "check": "npm run format:check && npm run lint && npm run test && npm run build",
+    "check": "pnpm run format:check && pnpm run lint && pnpm run test && pnpm run build",
     "clean": "rm -rf dist/"
   },
   "dependencies": {
@@ -31,7 +31,8 @@
     "chalk": "^5.4.1",
     "commander": "^14.0.0",
     "dotenv": "^16.5.0",
-    "tabtab": "^3.0.2"
+    "tabtab": "^3.0.2",
+    "thought-cabinet": "link:"
   },
   "devDependencies": {
     "@changesets/cli": "^2.29.8",
@@ -50,15 +51,11 @@
   "engines": {
     "node": "^20.0.0 || >=22.0.0"
   },
-  "overrides": {
-    "tabtab": {
-      "inquirer": "^10.0.0"
-    },
-    "external-editor": {
-      "tmp": "^0.2.4"
-    },
-    "@typescript-eslint/typescript-estree": {
-      "minimatch": "^10.2.1"
+  "pnpm": {
+    "overrides": {
+      "tabtab>inquirer": "^10.0.0",
+      "external-editor>tmp": "^0.2.4",
+      "@typescript-eslint/typescript-estree>minimatch": "^10.2.1"
     }
   },
   "keywords": [
@@ -75,5 +72,6 @@
     "type": "git",
     "url": "https://github.com/sanbaiw/thought-cabinet"
   },
-  "license": "Apache-2.0"
+  "license": "Apache-2.0",
+  "packageManager": "pnpm@10.30.1"
 }

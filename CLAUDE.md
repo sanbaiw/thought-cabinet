@@ -9,14 +9,14 @@ Thought Cabinet (`thc`) is a CLI tool for structured AI coding workflows with fi
 ## Build & Development Commands
 
 ```bash
-npm run build        # Build with tsup (outputs to dist/)
-npm run lint         # Run ESLint
-npm run lint -- --fix  # Fix lint issues
-npm run test         # Run vitest tests
-npm run check        # Full check: format:check, lint, test, build
-npm run format       # Format with prettier
-npm run format:check # Check formatting
-npm run clean        # Remove dist/
+pnpm run build        # Build with tsup (outputs to dist/)
+pnpm run lint         # Run ESLint
+pnpm run lint -- --fix  # Fix lint issues
+pnpm run test         # Run vitest tests
+pnpm run check        # Full check: format:check, lint, test, build
+pnpm run format       # Format with prettier
+pnpm run format:check # Check formatting
+pnpm run clean        # Remove dist/
 ```
 
 Run the CLI locally after building:
@@ -187,7 +187,7 @@ Test files are co-located with source or under `__tests__/`:
 - `src/tmux.test.ts`
 - `src/commands/thoughts/utils/git-url.test.ts`
 
-Test runner: vitest (`npm run test`)
+Test runner: vitest (`pnpm run test`)
 
 ## TypeScript Configuration
 
