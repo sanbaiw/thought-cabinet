@@ -50,6 +50,7 @@
 
 **File**: `path/to/file.ext`
 **Changes**: [Summary of changes]
+**Testable behaviors**: [List the behaviors this change introduces or modifies — these become TDD RED tests during implementation]
 
 ```[language]
 // Specific code to add/modify

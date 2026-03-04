@@ -19,14 +19,18 @@ The plan file at `thoughts/shared/plans/` is the contract. Success criteria in t
 
 ### Test-Driven Implementation
 
-When `test-driven-development` is available, apply its RED-GREEN-REFACTOR cycle for each unit of work within a phase:
+**MANDATORY**: Apply the `test-driven-development` skill's RED-GREEN-REFACTOR cycle for every unit of production code written within a phase.
 
-1. Write a failing test for the next behavior (RED)
+The procedure for each unit of work:
+
+1. Write a failing test (RED)
 2. Write minimal code to pass (GREEN)
 3. Refactor while keeping tests green
-4. Repeat for the next unit of work
+4. Repeat for the next behavior
 
 After all TDD cycles in the phase are complete, run the phase's automated verification commands as the final gate.
+
+**Resolving conflicts with the plan**: If the plan says "no tests needed", evaluate independently — apply TDD unless genuinely untestable (pure wiring, no behavioral logic). Document any skip with a reason in the phase completion message.
 
 ## Getting Started
 
@@ -73,9 +77,17 @@ Why this matters: [explanation]
 How should I proceed?
 ```
 
+## Phase Implementation Workflow
+
+Before writing any production code for a phase:
+
+1. Identify the testable behaviors the phase introduces or changes
+2. Apply the `test-driven-development` RED-GREEN-REFACTOR cycle for each behavior
+3. Only after all TDD cycles are complete, proceed to the completion checklist below
+
 ## Phase Completion Checklist
 
-After implementing a phase, follow this checklist **in order**:
+After implementing a phase (all TDD cycles done), follow this checklist **in order**:
 
 1. Run automated success criteria checks (compile, tests, etc.)
 2. Fix any issues found
