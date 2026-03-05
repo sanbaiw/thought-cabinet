@@ -104,14 +104,14 @@ thc agent init --force                  # Overwrite existing installations
 
 #### Installed Skills
 
-| Skill                | Slash Command           | Description                                                           |
-| -------------------- | ----------------------- | --------------------------------------------------------------------- |
+| Skill             | Slash Command        | Description                                                           |
+| ----------------- | -------------------- | --------------------------------------------------------------------- |
 | research-codebase | `/research-codebase` | Deep-dive into codebase, save findings to `thoughts/shared/research/` |
-| creating-plan        | `/creating-plan`        | Create implementation plan with phases and success criteria           |
-| iterating-plan       | `/iterating-plan`       | Refine existing plans based on feedback                               |
-| implementing-plan    | `/implementing-plan`    | Execute plan phase-by-phase with verification                         |
-| validating-plan      | `/validating-plan`      | Verify implementation against plan's success criteria                 |
-| commit               | `/commit`               | Create git commits with clear, descriptive messages                   |
+| creating-plan     | `/creating-plan`     | Create implementation plan with phases and success criteria           |
+| iterating-plan    | `/iterating-plan`    | Refine existing plans based on feedback                               |
+| implementing-plan | `/implementing-plan` | Execute plan phase-by-phase with verification                         |
+| validating-plan   | `/validating-plan`   | Verify implementation against plan's success criteria                 |
+| commit            | `/commit`            | Create git commits with clear, descriptive messages                   |
 
 #### Installed Agents
 
