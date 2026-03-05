@@ -197,3 +197,5 @@ When working within a plan phase:
 4. Follow `implementing-plan`'s Phase Completion Checklist: update checkboxes, present the verification message, wait for user confirmation
 
 The phase's automated verification is the final gate. TDD cycles happen within that gate, not instead of it.
+
+**When the plan says tests aren't needed**: Evaluate independently — apply TDD unless genuinely untestable (pure wiring, no behavioral logic). Document any skip with a reason in the phase completion message.
