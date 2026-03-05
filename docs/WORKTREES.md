@@ -16,7 +16,7 @@ cd your-project
 claude
 
 # Research the codebase
-> /researching-codebase
+> /research-codebase
 > How does the authentication system work?
 
 # Create an implementation plan
@@ -75,7 +75,7 @@ thc worktree merge add-oauth
 ```
 Main Branch                    Worktree (parallel)
     │
-    ├── /researching-codebase
+    ├── /research-codebase
     │   └── writes to thoughts/shared/research/
     │
     ├── /creating-plan

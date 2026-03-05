@@ -1,6 +1,6 @@
 ---
-name: researching-codebase
-description: Document codebase as-is with thoughts directory for historical context. Use when exploring how codebase features work, or understanding component interactions, or creating technical documentation of existing systems.
+name: research-codebase
+description: Research and understand how the codebase works, then document findings in thoughts directory. Use when investigating specific code flows or workflows, exploring how features are implemented, understanding component interactions, tracing initialization or lifecycle processes, or answering "how does X work" questions about the codebase.
 ---
 
 # Research Codebase

@@ -50,7 +50,7 @@ Entry point: `src/index.ts` - Registers six command groups:
 - `src/commands/hooks/` - Hooks subcommands (init)
 - `src/agent-assets/` - Bundled agent and skill assets
 - `src/agent-assets/agents/` - Agent markdown configs (codebase-analyzer, codebase-locator, codebase-pattern-finder, code-simplifier, thoughts-analyzer, thoughts-locator, web-search-researcher)
-- `src/agent-assets/skills/` - Skill packages (commit, creating-plan, implementing-plan, iterating-plan, researching-codebase, validating-plan)
+- `src/agent-assets/skills/` - Skill packages (commit, creating-plan, implementing-plan, iterating-plan, research-codebase, validating-plan)
 - `src/completion/` - Shell completion (handler, providers, installer)
 - `src/hooks/` - Hook system (types, loader, executor)
 - `src/templates/` - Template generators (gitignore, git hooks, readme, claudeMd, agentMd)

@@ -106,7 +106,7 @@ thc agent init --force                  # Overwrite existing installations
 
 | Skill                | Slash Command           | Description                                                           |
 | -------------------- | ----------------------- | --------------------------------------------------------------------- |
-| researching-codebase | `/researching-codebase` | Deep-dive into codebase, save findings to `thoughts/shared/research/` |
+| research-codebase | `/research-codebase` | Deep-dive into codebase, save findings to `thoughts/shared/research/` |
 | creating-plan        | `/creating-plan`        | Create implementation plan with phases and success criteria           |
 | iterating-plan       | `/iterating-plan`       | Refine existing plans based on feedback                               |
 | implementing-plan    | `/implementing-plan`    | Execute plan phase-by-phase with verification                         |
