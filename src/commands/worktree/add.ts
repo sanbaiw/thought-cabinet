@@ -108,11 +108,8 @@ export async function worktreeAddCommand(name: string, options: WorktreeAddOptio
       sourceDir: mainRoot,
       targetDir: worktreePath,
     })
-    if (configResult.copied.length > 0 || configResult.canonicalCopied) {
-      const parts: string[] = []
-      if (configResult.canonicalCopied) parts.push('.thought-cabinet')
-      parts.push(...configResult.copied)
-      console.log(chalk.gray(`Copied config: ${parts.join(', ')}`))
+    if (configResult.copied.length > 0) {
+      console.log(chalk.gray(`Copied config: ${configResult.copied.join(', ')}`))
     }
 
     // Initialize thoughts (unless --no-thoughts is specified)

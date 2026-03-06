@@ -23,7 +23,7 @@ export {
 } from './registry.js'
 
 // Installer
-export { sanitizeName, getCanonicalDir, getAgentDir, installAssetForAgent } from './installer.js'
+export { sanitizeName, getAgentDir, installAssetForAgent } from './installer.js'
 
 // Discovery
 export {
