@@ -128,34 +128,8 @@ export async function agentInitCommand(options: AgentInitOptions): Promise<void>
       }
     }
 
-    // Mode selection
-    let mode: InstallMode = options.mode ?? 'symlink'
-
-    if (!options.mode && !options.all) {
-      const modeChoice = await p.select({
-        message: 'Installation mode:',
-        options: [
-          {
-            value: 'symlink' as const,
-            label: 'Symlink (recommended)',
-            hint: 'Canonical storage + symlinks; update once, all agents see changes',
-          },
-          {
-            value: 'copy' as const,
-            label: 'Copy',
-            hint: 'Independent copies for each agent',
-          },
-        ],
-        initialValue: 'symlink' as const,
-      })
-
-      if (p.isCancel(modeChoice)) {
-        p.cancel('Operation cancelled.')
-        process.exit(0)
-      }
-
-      mode = modeChoice as InstallMode
-    }
+    // Mode: default to symlink, allow --mode copy override
+    const mode: InstallMode = options.mode ?? 'symlink'
 
     // Check for existing installations
     if (!options.force) {
@@ -257,7 +231,6 @@ export async function agentInitCommand(options: AgentInitOptions): Promise<void>
     const cwd = process.cwd()
     let totalInstalled = 0
     let totalFailed = 0
-    const symlinkWarnings: string[] = []
 
     const s = p.spinner()
     s.start('Installing assets...')
@@ -269,7 +242,7 @@ export async function agentInitCommand(options: AgentInitOptions): Promise<void>
         if (result.success) {
           totalInstalled++
           if (result.symlinkFailed) {
-            symlinkWarnings.push(
+            p.log.warn(
               `${asset.name} → ${agents[agentType].displayName}: symlink failed, copied instead`,
             )
           }
@@ -283,13 +256,6 @@ export async function agentInitCommand(options: AgentInitOptions): Promise<void>
     s.stop('Installation complete.')
 
     // Summary
-    if (symlinkWarnings.length > 0) {
-      p.log.warn('Symlink warnings:')
-      for (const warning of symlinkWarnings) {
-        p.log.warn(`  ${warning}`)
-      }
-    }
-
     const agentNames = selectedAgents.map(a => agents[a].displayName).join(', ')
     let message = `Installed ${totalInstalled} asset(s) to ${agentNames}`
     if (totalFailed > 0) {

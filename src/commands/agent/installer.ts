@@ -5,7 +5,6 @@ import type { AgentType, Asset, InstallMode, InstallResult, InstallScope } from 
 import type { AssetCategory } from './constants.js'
 import { agents } from './registry.js'
 import { CATEGORY_SUBDIRS } from './constants.js'
-import { getDefaultConfigDir } from '../../config.js'
 
 export function sanitizeName(name: string): string {
   const sanitized = name
@@ -19,16 +18,6 @@ function isPathSafe(basePath: string, targetPath: string): boolean {
   const normalizedBase = normalize(resolve(basePath))
   const normalizedTarget = normalize(resolve(targetPath))
   return normalizedTarget.startsWith(normalizedBase + sep) || normalizedTarget === normalizedBase
-}
-
-export function getCanonicalDir(
-  category: AssetCategory,
-  scope: InstallScope,
-  cwd?: string,
-): string {
-  const baseDir =
-    scope === 'global' ? getDefaultConfigDir() : join(cwd || process.cwd(), '.thought-cabinet')
-  return join(baseDir, CATEGORY_SUBDIRS[category])
 }
 
 export function getAgentDir(
@@ -146,14 +135,12 @@ export async function installAssetForAgent(
   }
 
   const assetName = sanitizeName(asset.name)
-  const canonicalBase = getCanonicalDir(asset.category, scope, cwd)
-  const canonicalDir = join(canonicalBase, assetName)
 
   const agentBase = getAgentDir(agentType, asset.category, scope, cwd)
   const agentDir = join(agentBase, assetName)
 
   // Guard against path traversal
-  if (!isPathSafe(canonicalBase, canonicalDir) || !isPathSafe(agentBase, agentDir)) {
+  if (!isPathSafe(agentBase, agentDir)) {
     return {
       success: false,
       path: agentDir,
@@ -179,30 +166,20 @@ export async function installAssetForAgent(
       return { success: true, path: agentDir, mode: 'copy' }
     }
 
-    // Symlink mode: copy to canonical dir, then symlink agent dir to it
-    await cleanAndCreateDirectory(canonicalDir)
-    await copyAsset(canonicalDir)
+    // Symlink mode: symlink agent dir directly to source
+    await rm(agentDir, { recursive: true, force: true })
+    await mkdir(dirname(agentDir), { recursive: true })
 
-    const symlinkCreated = await createSymlink(canonicalDir, agentDir)
+    const symlinkCreated = await createSymlink(asset.sourcePath, agentDir)
 
     if (!symlinkCreated) {
+      // Fallback to copy
       await cleanAndCreateDirectory(agentDir)
       await copyAsset(agentDir)
-      return {
-        success: true,
-        path: agentDir,
-        canonicalPath: canonicalDir,
-        mode: 'symlink',
-        symlinkFailed: true,
-      }
+      return { success: true, path: agentDir, mode: 'symlink', symlinkFailed: true }
     }
 
-    return {
-      success: true,
-      path: agentDir,
-      canonicalPath: canonicalDir,
-      mode: 'symlink',
-    }
+    return { success: true, path: agentDir, mode: 'symlink' }
   } catch (error) {
     return {
       success: false,

@@ -7,7 +7,7 @@ export type InstallMode = 'symlink' | 'copy'
 export type InstallScope = 'project' | 'global'
 
 /** Supported agent identifiers */
-export type AgentType = 'claude-code' | 'codebuddy' | 'cursor' | 'codex' | 'gemini-cli' | 'cline'
+export type AgentType = 'claude-code' | 'codebuddy'
 
 /** Agent configuration - defines where an agent stores its assets */
 export interface AgentConfig {
@@ -41,8 +41,6 @@ export interface Asset {
 export interface InstallResult {
   success: boolean
   path: string
-  /** Path to canonical storage (symlink mode only) */
-  canonicalPath?: string
   mode: InstallMode
   /** True if symlink was attempted but fell back to copy */
   symlinkFailed?: boolean

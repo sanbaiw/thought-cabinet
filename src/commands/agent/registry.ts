@@ -5,7 +5,6 @@ import type { AgentType, AgentConfig } from './types.js'
 
 const home = homedir()
 const claudeHome = process.env.CLAUDE_CONFIG_DIR?.trim() || join(home, '.claude')
-const codexHome = process.env.CODEX_HOME?.trim() || join(home, '.codex')
 
 /**
  * Curated agent registry.
@@ -26,34 +25,6 @@ export const agents: Record<AgentType, AgentConfig> = {
     globalConfigDir: join(home, '.codebuddy'),
     detectInstalled: async () =>
       existsSync(join(process.cwd(), '.codebuddy')) || existsSync(join(home, '.codebuddy')),
-  },
-  cursor: {
-    name: 'cursor',
-    displayName: 'Cursor',
-    configDir: '.cursor',
-    globalConfigDir: join(home, '.cursor'),
-    detectInstalled: async () => existsSync(join(home, '.cursor')),
-  },
-  codex: {
-    name: 'codex',
-    displayName: 'Codex',
-    configDir: '.codex',
-    globalConfigDir: codexHome,
-    detectInstalled: async () => existsSync(codexHome),
-  },
-  'gemini-cli': {
-    name: 'gemini-cli',
-    displayName: 'Gemini CLI',
-    configDir: '.gemini',
-    globalConfigDir: join(home, '.gemini'),
-    detectInstalled: async () => existsSync(join(home, '.gemini')),
-  },
-  cline: {
-    name: 'cline',
-    displayName: 'Cline',
-    configDir: '.cline',
-    globalConfigDir: join(home, '.cline'),
-    detectInstalled: async () => existsSync(join(home, '.cline')),
   },
 }
 

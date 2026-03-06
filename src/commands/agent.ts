@@ -9,7 +9,7 @@ export function agentCommand(program: Command): void {
   agent
     .command('init')
     .description('Initialize coding agent configuration in current directory')
-    .option('--target <agents...>', 'Target agents (e.g., claude-code codebuddy cursor)')
+    .option('--target <agents...>', 'Target agents (e.g., claude-code codebuddy)')
     .option('-g, --global', 'Install to global scope')
     .option('--mode <mode>', 'Installation mode: symlink or copy (default: symlink)')
     .option('--source <path>', 'Source directory for assets')

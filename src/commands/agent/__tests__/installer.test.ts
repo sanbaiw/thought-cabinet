@@ -1,8 +1,8 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest'
-import { join } from 'path'
+import { join, resolve, dirname } from 'path'
 import { mkdtemp, rm, readlink, lstat, readdir } from 'fs/promises'
 import { tmpdir } from 'os'
-import { installAssetForAgent, getCanonicalDir, getAgentDir } from '../installer.js'
+import { installAssetForAgent, getAgentDir } from '../installer.js'
 import type { Asset } from '../types.js'
 
 describe('installer', () => {
@@ -16,22 +16,15 @@ describe('installer', () => {
     await rm(tempDir, { recursive: true, force: true })
   })
 
-  describe('getCanonicalDir', () => {
-    it('should return project-level canonical dir', () => {
-      const dir = getCanonicalDir('skills', 'project', tempDir)
-      expect(dir).toBe(join(tempDir, '.thought-cabinet', 'skills'))
-    })
-  })
-
   describe('getAgentDir', () => {
     it('should return agent-specific dir for project scope', () => {
       const dir = getAgentDir('claude-code', 'skills', 'project', tempDir)
       expect(dir).toBe(join(tempDir, '.claude', 'skills'))
     })
 
-    it('should return agent-specific dir for different agents', () => {
-      const dir = getAgentDir('cursor', 'commands', 'project', tempDir)
-      expect(dir).toBe(join(tempDir, '.cursor', 'commands'))
+    it('should return agent-specific dir for codebuddy', () => {
+      const dir = getAgentDir('codebuddy', 'commands', 'project', tempDir)
+      expect(dir).toBe(join(tempDir, '.codebuddy', 'commands'))
     })
   })
 
@@ -50,7 +43,7 @@ describe('installer', () => {
       await writeFile(join(sourceDir, 'helper.ts'), 'export const x = 1')
     })
 
-    it('should install in symlink mode with canonical storage', async () => {
+    it('should install in symlink mode pointing directly to source', async () => {
       const asset: Asset = {
         name: 'test-skill',
         description: 'A test',
@@ -67,20 +60,23 @@ describe('installer', () => {
 
       expect(result.success).toBe(true)
       expect(result.mode).toBe('symlink')
-      expect(result.canonicalPath).toBeDefined()
       expect(result.symlinkFailed).toBeUndefined()
 
       // Verify symlink exists
       const stats = await lstat(result.path)
       expect(stats.isSymbolicLink()).toBe(true)
 
-      // Verify canonical dir has the files
-      const canonicalFiles = await readdir(result.canonicalPath!)
-      expect(canonicalFiles).toContain('SKILL.md')
-      expect(canonicalFiles).toContain('helper.ts')
+      // Verify symlink points to source, not .thought-cabinet
+      const linkTarget = await readlink(result.path)
+      const resolvedTarget = resolve(dirname(result.path), linkTarget)
+      expect(resolvedTarget).toBe(resolve(sourceDir))
+
+      // No .thought-cabinet created
+      const { existsSync } = await import('fs')
+      expect(existsSync(join(tempDir, '.thought-cabinet', 'skills'))).toBe(false)
     })
 
-    it('should install in copy mode without canonical storage', async () => {
+    it('should install in copy mode without symlinks', async () => {
       const asset: Asset = {
         name: 'test-skill',
         description: 'A test',
@@ -97,7 +93,6 @@ describe('installer', () => {
 
       expect(result.success).toBe(true)
       expect(result.mode).toBe('copy')
-      expect(result.canonicalPath).toBeUndefined()
 
       // Verify files were copied
       const files = await readdir(result.path)
@@ -178,7 +173,7 @@ describe('installer', () => {
       expect(result.success).toBe(true)
     })
 
-    it('should install to multiple agents from same canonical source', async () => {
+    it('should install to multiple agents from same source', async () => {
       const asset: Asset = {
         name: 'test-skill',
         description: 'A test',
@@ -193,7 +188,7 @@ describe('installer', () => {
         mode: 'symlink',
       })
 
-      const result2 = await installAssetForAgent(asset, 'cursor', {
+      const result2 = await installAssetForAgent(asset, 'codebuddy', {
         scope: 'project',
         cwd: tempDir,
         mode: 'symlink',
@@ -202,14 +197,13 @@ describe('installer', () => {
       expect(result1.success).toBe(true)
       expect(result2.success).toBe(true)
 
-      // Both should point to the same canonical dir
-      expect(result1.canonicalPath).toBe(result2.canonicalPath)
-
-      // Both symlinks should resolve
+      // Both symlinks should point to the same source dir
       const link1 = await readlink(result1.path)
       const link2 = await readlink(result2.path)
-      expect(link1).toBeTruthy()
-      expect(link2).toBeTruthy()
+      const resolved1 = resolve(dirname(result1.path), link1)
+      const resolved2 = resolve(dirname(result2.path), link2)
+      expect(resolved1).toBe(resolve(sourceDir))
+      expect(resolved2).toBe(resolve(sourceDir))
     })
   })
 })
