@@ -1,5 +1,11 @@
 # thought-cabinet
 
+## 0.1.13
+
+### Patch Changes
+
+- abaaca3: Refactor bundled agent assets and installation behavior so agent/skill files are organized under dedicated directories and installed via direct symlinks to packaged source assets. Also tighten published package file inclusion to avoid shipping redundant `.thought-cabinet` assets.
+
 ## 0.1.12
 
 ### Patch Changes
