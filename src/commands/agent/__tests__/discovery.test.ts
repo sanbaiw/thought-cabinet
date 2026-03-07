@@ -122,20 +122,23 @@ describe('discoverMarkdownAssets', () => {
     await rm(tempDir, { recursive: true, force: true })
   })
 
-  it('should discover markdown files', async () => {
-    await writeFile(join(tempDir, 'commit.md'), '# Commit command')
-    await writeFile(join(tempDir, 'review.md'), '# Review command')
+  it('should discover directories containing matching markdown files', async () => {
+    await mkdir(join(tempDir, 'commit'), { recursive: true })
+    await writeFile(join(tempDir, 'commit', 'commit.md'), '# Commit command')
+    await mkdir(join(tempDir, 'review'), { recursive: true })
+    await writeFile(join(tempDir, 'review', 'review.md'), '# Review command')
 
     const assets = await discoverMarkdownAssets(tempDir, 'commands')
     expect(assets).toHaveLength(2)
     expect(assets.map(a => a.name).sort()).toEqual(['commit', 'review'])
     expect(assets[0].category).toBe('commands')
-    expect(assets[0].isDirectory).toBe(false)
+    expect(assets[0].isDirectory).toBe(true)
   })
 
   it('should extract description from frontmatter', async () => {
+    await mkdir(join(tempDir, 'plan'), { recursive: true })
     await writeFile(
-      join(tempDir, 'plan.md'),
+      join(tempDir, 'plan', 'plan.md'),
       '---\ndescription: Create implementation plans\n---\n# Plan',
     )
 
@@ -144,21 +147,19 @@ describe('discoverMarkdownAssets', () => {
     expect(assets[0].description).toBe('Create implementation plans')
   })
 
-  it('should skip non-md files', async () => {
-    await writeFile(join(tempDir, 'script.ts'), 'export const x = 1')
-    await writeFile(join(tempDir, 'readme.txt'), 'text')
+  it('should skip directories without matching md file', async () => {
+    await mkdir(join(tempDir, 'no-match'), { recursive: true })
+    await writeFile(join(tempDir, 'no-match', 'other.md'), '# Other')
 
     const assets = await discoverMarkdownAssets(tempDir, 'commands')
     expect(assets).toHaveLength(0)
   })
 
-  it('should skip directories', async () => {
-    await mkdir(join(tempDir, 'subdir'))
-    await writeFile(join(tempDir, 'valid.md'), '# Valid')
+  it('should skip flat files (non-directories)', async () => {
+    await writeFile(join(tempDir, 'flat.md'), '# Flat file')
 
     const assets = await discoverMarkdownAssets(tempDir, 'agents')
-    expect(assets).toHaveLength(1)
-    expect(assets[0].name).toBe('valid')
+    expect(assets).toHaveLength(0)
   })
 
   it('should return empty for non-existent path', async () => {
@@ -179,10 +180,10 @@ describe('discoverAllAssets', () => {
   })
 
   it('should discover all asset categories', async () => {
-    // Create agents
-    const agentsDir = join(tempDir, 'agents')
-    await mkdir(agentsDir, { recursive: true })
-    await writeFile(join(agentsDir, 'analyzer.md'), '# Analyzer')
+    // Create agents (directory-based)
+    const agentDir = join(tempDir, 'agents', 'analyzer')
+    await mkdir(agentDir, { recursive: true })
+    await writeFile(join(agentDir, 'analyzer.md'), '# Analyzer')
 
     // Create skills
     const skillsDir = join(tempDir, 'skills', 'my-skill')
@@ -194,6 +195,7 @@ describe('discoverAllAssets', () => {
 
     const result = await discoverAllAssets(tempDir)
     expect(result.agents).toHaveLength(1)
+    expect(result.agents[0].isDirectory).toBe(true)
     expect(result.skills).toHaveLength(1)
   })
 
