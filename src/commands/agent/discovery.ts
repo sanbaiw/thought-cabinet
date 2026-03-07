@@ -1,5 +1,5 @@
 import { readdir, readFile } from 'fs/promises'
-import { join, basename, extname } from 'path'
+import { join } from 'path'
 import type { Asset } from './types.js'
 
 /** Parse SKILL.md frontmatter to extract name and description */
@@ -60,7 +60,7 @@ export async function discoverSkills(basePath: string): Promise<Asset[]> {
   return assets
 }
 
-/** Discover markdown files from a category directory (commands or agents) */
+/** Discover agent/command directories containing markdown files */
 export async function discoverMarkdownAssets(
   basePath: string,
   category: 'commands' | 'agents',
@@ -71,15 +71,15 @@ export async function discoverMarkdownAssets(
     const entries = await readdir(basePath, { withFileTypes: true })
 
     for (const entry of entries) {
-      if (entry.isDirectory()) continue
-      if (extname(entry.name) !== '.md') continue
+      if (!entry.isDirectory()) continue
 
-      const filePath = join(basePath, entry.name)
-      const name = basename(entry.name, '.md')
+      const dirPath = join(basePath, entry.name)
 
+      // Look for a .md file matching the directory name
+      const mdFile = join(dirPath, `${entry.name}.md`)
       let description = ''
       try {
-        const content = await readFile(filePath, 'utf-8')
+        const content = await readFile(mdFile, 'utf-8')
         const match = content.match(/^---\n([\s\S]*?)\n---/)
         if (match) {
           const descMatch = match[1].match(/description:\s*(.+)/)
@@ -88,15 +88,16 @@ export async function discoverMarkdownAssets(
           }
         }
       } catch {
-        // Can't read file, use empty description
+        // No matching .md file, skip this directory
+        continue
       }
 
       assets.push({
-        name,
+        name: entry.name,
         description,
-        sourcePath: filePath,
+        sourcePath: dirPath,
         category,
-        isDirectory: false,
+        isDirectory: true,
       })
     }
   } catch {
