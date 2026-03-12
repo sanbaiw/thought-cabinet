@@ -7,16 +7,6 @@ description: Initializes agent memory for a new project by creating a concise AG
 
 Create high-signal project memory for new repositories by generating `AGENTS.md` plus focused supporting docs under `docs/`, then creating `CLAUDE.md` as a compatibility symlink.
 
-## Workflow Context
-
-This skill establishes the baseline memory docs used by all coding and research skills:
-
-1. **init-agent-memory** (this skill) - Create `AGENTS.md`, foundational supporting docs, and a compatibility symlink
-2. `research-codebase` - Deepen or update technical documentation when needed
-3. `writing-skill` - Create or revise additional workflow skills after memory is established
-
-The output should optimize fast orientation: short primary doc, detailed references in separate files.
-
 ## Workflow Overview
 
 1. **Gather context** - Read user instructions and repository facts; ask only unresolved questions
