@@ -1,31 +1,93 @@
-import fs from 'fs'
-import path from 'path'
+import { existsSync } from 'fs'
+import { dirname, join, resolve } from 'path'
 import chalk from 'chalk'
 import * as p from '@clack/prompts'
 import { fileURLToPath } from 'url'
+import { cp, mkdir, readdir } from 'fs/promises'
 import type { AgentType, AgentInitOptions, Asset, InstallMode, InstallScope } from './types.js'
 import { agents, detectInstalledAgents, getAllAgents } from './registry.js'
 import { discoverAllAssets } from './discovery.js'
 import { installAssetForAgent } from './installer.js'
+import { getDefaultConfigDir } from '../../config.js'
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url))
+const __dirname = dirname(fileURLToPath(import.meta.url))
+
+const ASSET_CATEGORIES = ['agents', 'skills'] as const
+
+/** Find the bundled agent-assets directory relative to __dirname */
+export function getBundledAssetsDir(): string | null {
+  const candidates = [
+    resolve(__dirname, '..', 'src', 'agent-assets'),
+    resolve(__dirname, '..', '..', 'src', 'agent-assets'),
+    resolve(__dirname, '..', '..', '..', 'src', 'agent-assets'),
+  ]
+  return candidates.find(dir => existsSync(dir)) ?? null
+}
+
+/**
+ * Copy bundled assets to the config directory when it lacks agents/ and skills/ subdirectories.
+ * Returns the config dir path on success, null if bundledDir is null.
+ */
+export async function bootstrapAssetsIfNeeded(
+  configDir: string,
+  bundledDir: string | null,
+): Promise<string | null> {
+  if (!bundledDir) return null
+
+  const hasAssets = ASSET_CATEGORIES.some(cat => existsSync(join(configDir, cat)))
+  if (hasAssets) return configDir
+
+  for (const category of ASSET_CATEGORIES) {
+    const src = join(bundledDir, category)
+    const dest = join(configDir, category)
+
+    if (!existsSync(src)) continue
+    await mkdir(dest, { recursive: true })
+
+    const entries = await readdir(src, { withFileTypes: true })
+    for (const entry of entries) {
+      if (!entry.isDirectory()) continue
+      await cp(join(src, entry.name), join(dest, entry.name), {
+        recursive: true,
+        force: false,
+        errorOnExist: false,
+      })
+    }
+  }
+
+  return configDir
+}
 
 /**
  * Resolve the source directory for agent assets.
- * Priority: --source flag > bundled assets
+ * Priority: --source flag > config dir (with asset subdirs) > bootstrap from bundled > bundled fallback.
+ *
+ * Optional configDir and bundledDir parameters override defaults for testability.
  */
-function resolveSourceDir(customSource?: string): string | null {
+export async function resolveSourceDir(
+  customSource?: string,
+  configDir?: string,
+  bundledDir?: string | null,
+): Promise<string | null> {
+  // Priority 1: explicit --source flag
   if (customSource) {
-    const resolved = path.resolve(customSource)
-    return fs.existsSync(resolved) ? resolved : null
+    const resolved = resolve(customSource)
+    return existsSync(resolved) ? resolved : null
   }
 
-  const candidates = [
-    path.resolve(__dirname, '..', 'src/agent-assets'),
-    path.resolve(__dirname, '../..', 'src/agent-assets'),
-  ]
+  const config = configDir ?? getDefaultConfigDir()
+  const bundled = bundledDir === undefined ? getBundledAssetsDir() : bundledDir
 
-  return candidates.find(p => fs.existsSync(p)) ?? null
+  // Priority 2: config directory already has asset subdirectories
+  const hasAssets = ASSET_CATEGORIES.some(cat => existsSync(join(config, cat)))
+  if (hasAssets) return config
+
+  // Priority 3: bootstrap bundled assets into config dir
+  const bootstrapped = await bootstrapAssetsIfNeeded(config, bundled)
+  if (bootstrapped) return bootstrapped
+
+  // Priority 4: fall back to bundled assets directly
+  return bundled
 }
 
 /** Resolve the agent's config directory based on scope */
@@ -33,7 +95,7 @@ function resolveAgentBaseDir(agentType: AgentType, scope: InstallScope, cwd: str
   const agent = agents[agentType]
   return scope === 'global' && agent.globalConfigDir
     ? agent.globalConfigDir
-    : path.join(cwd, agent.configDir)
+    : join(cwd, agent.configDir)
 }
 
 export async function agentInitCommand(options: AgentInitOptions): Promise<void> {
@@ -46,7 +108,7 @@ export async function agentInitCommand(options: AgentInitOptions): Promise<void>
       process.exit(1)
     }
 
-    const sourceDir = resolveSourceDir(options.source)
+    const sourceDir = await resolveSourceDir(options.source)
     if (!sourceDir) {
       p.log.error('Source directory not found.')
       if (options.source) {
@@ -137,7 +199,7 @@ export async function agentInitCommand(options: AgentInitOptions): Promise<void>
       for (const agentType of selectedAgents) {
         const agentDir = resolveAgentBaseDir(agentType, scope, cwd)
 
-        if (fs.existsSync(agentDir) && !options.all) {
+        if (existsSync(agentDir) && !options.all) {
           const overwrite = await p.confirm({
             message: `${agents[agentType].displayName} directory already exists at ${agentDir}. Overwrite?`,
             initialValue: false,
@@ -155,7 +217,7 @@ export async function agentInitCommand(options: AgentInitOptions): Promise<void>
     let selectedCategories: string[]
 
     if (options.all) {
-      selectedCategories = ['agents', 'skills']
+      selectedCategories = [...ASSET_CATEGORIES]
     } else {
       p.note(
         'Use ↑/↓ to move, Space to select/deselect, A to toggle all, Enter to confirm.',
@@ -195,9 +257,8 @@ export async function agentInitCommand(options: AgentInitOptions): Promise<void>
 
     // Per-category asset selection
     const assetsToInstall: Asset[] = []
-    const assetCategories = ['agents', 'skills'] as const
 
-    for (const category of assetCategories) {
+    for (const category of ASSET_CATEGORIES) {
       if (!selectedCategories.includes(category)) continue
       const categoryAssets = discovered[category]
       if (categoryAssets.length === 0) continue
