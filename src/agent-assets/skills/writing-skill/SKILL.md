@@ -59,18 +59,9 @@ Save to `$THC_SKILLS_DIR/[skill-name]/`.
 
 ### 1c. Research Patterns
 
-Spawn parallel searches for analog skills in each skill directory:
-
-**Search 1: Local skills** (`$THC_SKILLS_DIR`)
-Find skills similar to what you're building:
-- Similar task structure (phases, steps, decisions)
-- Similar complexity (simple/imperative vs multi-phase)
-- Similar interaction patterns (user prompts, validation)
-
-**Search 2: Bundled skills** (if accessible)
-Search the project's skill source for additional examples:
-- `src/agent-assets/skills/` or similar directories
-- Look for the same characteristics as Search 1
+Spawn parallel sub-agents to searche for analog skills in skill directories:
+- `$THC_SKILLS_DIR`
+- agent skill directories, e.g. `~/.claude/skills/` and `.claude/skills/` for Claude Code
 
 **Choose analog** based on characteristics:
 - Multi-phase workflow → find complex workflow skills
@@ -119,7 +110,14 @@ Run the checklist from best-practices.md:
 Created: $THC_SKILLS_DIR/[name]/SKILL.md
 Key decisions: [rationales]
 Quality: [x] passes checklist
-Adjustments?
+```
+
+### 1g. Install Skill
+
+Make the skill available:
+
+```bash
+thc agent init --target [agent-name] --force
 ```
 
 ---
@@ -177,7 +175,7 @@ Replace specifics with patterns, frameworks. Remove session artifacts.
 
 ### 3c. Write
 
-Resolve directory (Step 1b), then follow Step 1e-1f.
+Resolve directory (Step 1b), then follow Step 1e-1g.
 
 ---
 
