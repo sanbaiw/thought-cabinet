@@ -1,0 +1,183 @@
+---
+name: writing-skill
+description: Create, revise, or distill workflows into skills following best practices. Use when user asks to create a new skill, iterate on an existing skill, distill a session workflow into a reusable skill, or improve skill quality.
+---
+
+# Writing Skills
+
+Create new skills, revise existing ones, or distill workflows into reusable skills. Follow [best practices](best-practices.md) and use [skill-template](skill-template.md).
+
+## Workflow Context
+
+This meta-skill produces skills for the agent ecosystem:
+- `creating-plan` / `implementing-plan` / `validating-plan` — Complex workflow models
+- `researching-codebase` — Research/synthesis model
+- `commit` — Simple imperative model
+- `test-driven-development` — Integration-focused model
+
+**Skills are saved to your Thought Cabinet skills directory**:
+- `~/.thought-cabinet/skills/` (new)
+- `~/.config/thought-cabinet/skills/` (legacy, if config exists there)
+
+## Determine the Mode
+
+Infer from user query:
+- "create", "new", "write" → Step 1
+- "revise", "update", "fix", "improve", "modify" → Step 2  
+- "distill", "extract", "turn into skill" → Step 3
+
+Only ask if ambiguous: "What would you like to do? (create new / revise existing / distill from session)"
+
+---
+
+## Step 1: Create New Skill
+
+### 1a. Requirements
+
+Only ask what user hasn't provided:
+- Task automated/guided
+- Trigger contexts (words/situations)
+- Inputs needed and outputs produced
+- Relation to existing skills
+
+### 1b. Resolve Skills Directory
+
+```bash
+# Check for existing config
+if [ -f ~/.thought-cabinet/config.json ]; then
+  export THC_SKILLS_DIR=~/.thought-cabinet/skills
+elif [ -f ~/.config/thought-cabinet/config.json ]; then
+  export THC_SKILLS_DIR=~/.config/thought-cabinet/skills
+else
+  export THC_SKILLS_DIR=~/.thought-cabinet/skills
+fi
+
+mkdir -p "$THC_SKILLS_DIR"
+```
+
+Save to `$THC_SKILLS_DIR/[skill-name]/`.
+
+### 1c. Research Patterns
+
+Run in parallel:
+- `codebase-pattern-finder`: Search `$THC_SKILLS_DIR` and `src/agent-assets/skills/` for analogs
+- `codebase-analyzer`: Understand infrastructure (discovery.ts, installer.ts, types.ts)
+
+Choose analog:
+- Multi-phase → `creating-plan`
+- Simple imperative → `commit`
+- Research/synthesis → `researching-codebase`
+- Integration → `test-driven-development`
+
+### 1d. Design Present
+
+```
+**Name**: kebab-case-name
+**Description**: Third-person, specific, includes triggers
+**Modeled after**: [skill] + rationale
+**Save to**: $THC_SKILLS_DIR/[skill-name]
+
+**Workflow**:
+1. Step - action
+2. Step - action
+
+**Integration**: how it connects
+
+**Files**: SKILL.md, [supplements + rationale]
+
+Confirm before writing?
+```
+
+### 1e. Write
+
+1. Create `$THC_SKILLS_DIR/[skill-name]/`
+2. Write SKILL.md following template
+3. Add supplementary files
+4. Verify against analog skill
+
+### 1f. Quality Check
+
+Run the checklist from best-practices.md:
+- [ ] Description specific with triggers
+- [ ] Under 500 lines
+- [ ] Concise (no unnecessary explanations)
+- [ ] Consistent terminology
+- [ ] One-level references
+- [ ] Clear workflow steps
+- [ ] Integrates naturally
+
+```
+Created: $THC_SKILLS_DIR/[name]/SKILL.md
+Key decisions: [rationales]
+Quality: [x] passes checklist
+Adjustments?
+```
+
+---
+
+## Step 2: Revise Existing Skill
+
+### 2a. Locate Skills Directory
+
+Resolve directory (Step 1b), then list available skills:
+```bash
+ls -la "$THC_SKILLS_DIR"
+```
+
+### 2b. Audit
+
+Read SKILL.md and best-practices.md.
+
+```
+**Strengths**: [what works]
+**Issues**: [specific problems from checklist]
+**Changes**: 1. [change] 2. [change]
+
+Which changes?
+```
+
+### 2c. Apply
+
+Make surgical edits to `$THC_SKILLS_DIR/[skill-name]/`. Maintain structure unless changing it.
+
+```
+Updated [skill-name]:
+- [change 1]
+- [change 2]
+Quality check passed. Further?
+```
+
+---
+
+## Step 3: Distill Session Workflow
+
+### 3a. Extract
+
+```
+**Task pattern**: what we did
+**Steps**: 1. [step] 2. [step]
+**Context needed**: what helps future runs
+**Proposed name**: kebab-case-name
+Save to: $THC_SKILLS_DIR/[name]/
+Create?
+```
+
+### 3b. Generalize
+
+Replace specifics with patterns, frameworks. Remove session artifacts.
+
+### 3c. Write
+
+Resolve directory (Step 1b), then follow Step 1e-1f.
+
+---
+
+## Guidelines
+
+**Conciseness**: Challenge every paragraph — does it justify its token cost?
+
+**Integration**: Reference related skills in Workflow Context. Match tone/structure to analog.
+
+**Iterate**: Ship minimal working skill, refine from usage.
+
+**Config Compatibility**: Check `~/.thought-cabinet/` (new) and `~/.config/thought-cabinet/` (legacy). Use existing location; default to new.
