@@ -41,6 +41,8 @@ export interface Asset {
 export interface InstallResult {
   success: boolean
   path: string
+  /** Path to canonical storage (project-scope symlink mode only) */
+  canonicalPath?: string
   mode: InstallMode
   /** True if symlink was attempted but fell back to copy */
   symlinkFailed?: boolean

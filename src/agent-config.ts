@@ -1,6 +1,7 @@
 import fs from 'fs'
 import path from 'path'
 import { agents } from './commands/agent/registry.js'
+import { CANONICAL_DIR } from './commands/agent/constants.js'
 
 export interface CopyAgentConfigOptions {
   /** Source directory (main worktree) */
@@ -22,6 +23,8 @@ export interface CopyAgentConfigResult {
  */
 function detectAgentConfigDirs(sourceDir: string): string[] {
   const uniqueDirs = [...new Set(Object.values(agents).map(a => a.configDir))]
+  // Also include the canonical intermediate directory
+  uniqueDirs.push(CANONICAL_DIR)
   return uniqueDirs.filter(dir => fs.existsSync(path.join(sourceDir, dir)))
 }
 
@@ -64,8 +67,9 @@ function copyDirWithSymlinkHandling(srcDir: string, destDir: string): void {
 /**
  * Copy agent configuration directories to a new worktree.
  *
- * Preserves symlinks as-is (they point to the package source directly).
- * Non-symlink files are copied normally.
+ * Copies agent config dirs (e.g. .claude/) and the canonical intermediate
+ * directory (.thought-cabinet/) so that project-scope symlinks resolve correctly.
+ * Preserves symlinks as-is. Non-symlink files are copied normally.
  */
 export function copyAgentConfigDirs(options: CopyAgentConfigOptions): CopyAgentConfigResult {
   const { sourceDir, targetDir } = options

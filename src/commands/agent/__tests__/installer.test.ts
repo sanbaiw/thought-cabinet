@@ -43,7 +43,7 @@ describe('installer', () => {
       await writeFile(join(sourceDir, 'helper.ts'), 'export const x = 1')
     })
 
-    it('should install in symlink mode pointing directly to source', async () => {
+    it('should install in symlink mode via in-repo intermediate for project scope', async () => {
       const asset: Asset = {
         name: 'test-skill',
         description: 'A test',
@@ -61,19 +61,25 @@ describe('installer', () => {
       expect(result.success).toBe(true)
       expect(result.mode).toBe('symlink')
       expect(result.symlinkFailed).toBeUndefined()
+      expect(result.canonicalPath).toBe(join(tempDir, '.thought-cabinet', 'skills', 'test-skill'))
 
       // Verify symlink exists
       const stats = await lstat(result.path)
       expect(stats.isSymbolicLink()).toBe(true)
 
-      // Verify symlink points to source, not .thought-cabinet
+      // Verify symlink points to .thought-cabinet canonical dir, not source
       const linkTarget = await readlink(result.path)
       const resolvedTarget = resolve(dirname(result.path), linkTarget)
-      expect(resolvedTarget).toBe(resolve(sourceDir))
+      expect(resolvedTarget).toBe(
+        resolve(join(tempDir, '.thought-cabinet', 'skills', 'test-skill')),
+      )
 
-      // No .thought-cabinet created
+      // Verify canonical dir exists with copied files
       const { existsSync } = await import('fs')
-      expect(existsSync(join(tempDir, '.thought-cabinet', 'skills'))).toBe(false)
+      expect(existsSync(join(tempDir, '.thought-cabinet', 'skills', 'test-skill'))).toBe(true)
+      const files = await readdir(join(tempDir, '.thought-cabinet', 'skills', 'test-skill'))
+      expect(files).toContain('SKILL.md')
+      expect(files).toContain('helper.ts')
     })
 
     it('should install in copy mode without symlinks', async () => {
@@ -173,7 +179,7 @@ describe('installer', () => {
       expect(result.success).toBe(true)
     })
 
-    it('should install to multiple agents from same source', async () => {
+    it('should install to multiple agents from same source via shared canonical dir', async () => {
       const asset: Asset = {
         name: 'test-skill',
         description: 'A test',
@@ -197,13 +203,43 @@ describe('installer', () => {
       expect(result1.success).toBe(true)
       expect(result2.success).toBe(true)
 
-      // Both symlinks should point to the same source dir
+      // Both symlinks should point to the same .thought-cabinet canonical dir
       const link1 = await readlink(result1.path)
       const link2 = await readlink(result2.path)
       const resolved1 = resolve(dirname(result1.path), link1)
       const resolved2 = resolve(dirname(result2.path), link2)
-      expect(resolved1).toBe(resolve(sourceDir))
-      expect(resolved2).toBe(resolve(sourceDir))
+      const canonicalPath = resolve(join(tempDir, '.thought-cabinet', 'skills', 'test-skill'))
+      expect(resolved1).toBe(canonicalPath)
+      expect(resolved2).toBe(canonicalPath)
+    })
+
+    it('should symlink directly to source for global scope', async () => {
+      const asset: Asset = {
+        name: 'test-skill',
+        description: 'A test',
+        sourcePath: sourceDir,
+        category: 'skills',
+        isDirectory: true,
+      }
+
+      const result = await installAssetForAgent(asset, 'claude-code', {
+        scope: 'global',
+        cwd: tempDir,
+        mode: 'symlink',
+      })
+
+      expect(result.success).toBe(true)
+      expect(result.mode).toBe('symlink')
+      expect(result.canonicalPath).toBeUndefined()
+
+      // Verify symlink exists
+      const stats = await lstat(result.path)
+      expect(stats.isSymbolicLink()).toBe(true)
+
+      // Verify symlink points directly to source (no intermediate)
+      const linkTarget = await readlink(result.path)
+      const resolvedTarget = resolve(dirname(result.path), linkTarget)
+      expect(resolvedTarget).toBe(resolve(sourceDir))
     })
   })
 })
