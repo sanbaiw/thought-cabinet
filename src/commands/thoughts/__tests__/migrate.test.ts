@@ -1,9 +1,15 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest'
-import { join } from 'path'
-import { mkdtemp, rm, mkdir, writeFile, readFile } from 'fs/promises'
-import { existsSync } from 'fs'
+import { join, relative } from 'path'
+import { mkdtemp, rm, mkdir, writeFile, readFile, symlink } from 'fs/promises'
+import { existsSync, lstatSync, realpathSync } from 'fs'
 import { tmpdir } from 'os'
-import { planMigration, executeMigration } from '../migrate.js'
+import {
+  planMigration,
+  executeMigration,
+  refreshRepoSymlinks,
+  refreshGlobalAgentSymlinks,
+  previewGlobalAgentSymlinks,
+} from '../migrate.js'
 
 async function createLegacySetup(
   homeDir: string,
@@ -256,5 +262,337 @@ describe('executeMigration', () => {
 
     const plan = planMigration(homeDir)!
     expect(plan.affectedRepos).toEqual(['/home/user/project-a', '/home/user/project-b'])
+  })
+})
+
+describe('refreshRepoSymlinks', () => {
+  let homeDir: string
+  const originalEnv = { ...process.env }
+
+  beforeEach(async () => {
+    homeDir = await mkdtemp(join(tmpdir(), 'migrate-repo-symlinks-'))
+    process.env.HOME = homeDir
+    delete process.env.XDG_CONFIG_HOME
+  })
+
+  afterEach(async () => {
+    process.env = { ...originalEnv }
+    await rm(homeDir, { recursive: true, force: true })
+  })
+
+  it('refreshes symlinks for repos that exist on disk', async () => {
+    const newConfigDir = join(homeDir, '.thought-cabinet')
+    const thoughtsRepo = join(newConfigDir, 'thoughts')
+
+    // Create the thoughts repo structure
+    await mkdir(join(thoughtsRepo, 'repos', 'my-project', 'testuser'), { recursive: true })
+    await mkdir(join(thoughtsRepo, 'repos', 'my-project', 'shared'), { recursive: true })
+    await mkdir(join(thoughtsRepo, 'global'), { recursive: true })
+
+    // Create a repo dir with stale thoughts/ symlinks (pointing to old location)
+    const repoPath = join(homeDir, 'projects', 'my-project')
+    await mkdir(join(repoPath, 'thoughts'), { recursive: true })
+    const oldThoughtsRepo = join(homeDir, 'old-location', 'thoughts')
+    await mkdir(join(oldThoughtsRepo, 'repos', 'my-project', 'testuser'), { recursive: true })
+    await mkdir(join(oldThoughtsRepo, 'repos', 'my-project', 'shared'), { recursive: true })
+    await mkdir(join(oldThoughtsRepo, 'global'), { recursive: true })
+    await symlink(
+      join(oldThoughtsRepo, 'repos', 'my-project', 'testuser'),
+      join(repoPath, 'thoughts', 'testuser'),
+    )
+    await symlink(
+      join(oldThoughtsRepo, 'repos', 'my-project', 'shared'),
+      join(repoPath, 'thoughts', 'shared'),
+    )
+    await symlink(join(oldThoughtsRepo, 'global'), join(repoPath, 'thoughts', 'global'))
+
+    // Write config at new location
+    await mkdir(newConfigDir, { recursive: true })
+    await writeFile(
+      join(newConfigDir, 'config.json'),
+      JSON.stringify({
+        thoughts: {
+          thoughtsRepo,
+          reposDir: 'repos',
+          globalDir: 'global',
+          user: 'testuser',
+          repoMappings: { [repoPath]: 'my-project' },
+        },
+      }),
+    )
+
+    const config = {
+      thoughtsRepo,
+      reposDir: 'repos',
+      globalDir: 'global',
+      user: 'testuser',
+      repoMappings: { [repoPath]: 'my-project' } as Record<string, string>,
+    }
+
+    const result = refreshRepoSymlinks(config, [repoPath])
+
+    expect(result.refreshed).toContain(repoPath)
+    expect(result.skipped).toHaveLength(0)
+
+    // Verify symlinks now point to new location
+    const sharedTarget = realpathSync(join(repoPath, 'thoughts', 'shared'))
+    expect(sharedTarget).toBe(join(thoughtsRepo, 'repos', 'my-project', 'shared'))
+  })
+
+  it('skips repos that do not exist on disk', async () => {
+    const config = {
+      thoughtsRepo: join(homeDir, '.thought-cabinet', 'thoughts'),
+      reposDir: 'repos',
+      globalDir: 'global',
+      user: 'testuser',
+      repoMappings: { '/nonexistent/repo': 'missing-repo' } as Record<string, string>,
+    }
+
+    const result = refreshRepoSymlinks(config, ['/nonexistent/repo'])
+
+    expect(result.refreshed).toHaveLength(0)
+    expect(result.skipped).toContain('/nonexistent/repo')
+  })
+
+  it('returns summary of refreshed and skipped repos', async () => {
+    const newConfigDir = join(homeDir, '.thought-cabinet')
+    const thoughtsRepo = join(newConfigDir, 'thoughts')
+
+    // Create thoughts repo structure for existing project
+    await mkdir(join(thoughtsRepo, 'repos', 'exists', 'testuser'), { recursive: true })
+    await mkdir(join(thoughtsRepo, 'repos', 'exists', 'shared'), { recursive: true })
+    await mkdir(join(thoughtsRepo, 'global'), { recursive: true })
+
+    // Create one existing repo
+    const existingRepo = join(homeDir, 'projects', 'exists')
+    await mkdir(existingRepo, { recursive: true })
+
+    const config = {
+      thoughtsRepo,
+      reposDir: 'repos',
+      globalDir: 'global',
+      user: 'testuser',
+      repoMappings: {
+        [existingRepo]: 'exists',
+        '/nonexistent/repo': 'gone',
+      } as Record<string, string>,
+    }
+
+    const result = refreshRepoSymlinks(config, [existingRepo, '/nonexistent/repo'])
+
+    expect(result.refreshed).toEqual([existingRepo])
+    expect(result.skipped).toEqual(['/nonexistent/repo'])
+  })
+})
+
+describe('refreshGlobalAgentSymlinks', () => {
+  let homeDir: string
+  const originalEnv = { ...process.env }
+
+  beforeEach(async () => {
+    homeDir = await mkdtemp(join(tmpdir(), 'migrate-agent-symlinks-'))
+    process.env.HOME = homeDir
+    delete process.env.XDG_CONFIG_HOME
+  })
+
+  afterEach(async () => {
+    process.env = { ...originalEnv }
+    await rm(homeDir, { recursive: true, force: true })
+  })
+
+  it('recreates symlinks pointing from legacy to new config dir', async () => {
+    const legacyConfigDir = join(homeDir, '.config', 'thought-cabinet')
+    const newConfigDir = join(homeDir, '.thought-cabinet')
+
+    // Create legacy and new skills
+    await mkdir(join(legacyConfigDir, 'skills', 'commit'), { recursive: true })
+    await writeFile(join(legacyConfigDir, 'skills', 'commit', 'SKILL.md'), '# Commit')
+    await mkdir(join(newConfigDir, 'skills', 'commit'), { recursive: true })
+    await writeFile(join(newConfigDir, 'skills', 'commit', 'SKILL.md'), '# Commit')
+
+    // Create an agent global dir with a symlink pointing to legacy location
+    const agentGlobalDir = join(homeDir, '.test-agent')
+    const agentSkillsDir = join(agentGlobalDir, 'skills')
+    await mkdir(agentSkillsDir, { recursive: true })
+
+    // Create a relative symlink from agent dir to legacy config dir
+    const relPath = relative(agentSkillsDir, join(legacyConfigDir, 'skills', 'commit'))
+    await symlink(relPath, join(agentSkillsDir, 'commit'))
+
+    // Verify symlink resolves to legacy location
+    const resolvedBefore = realpathSync(join(agentSkillsDir, 'commit'))
+    expect(resolvedBefore).toBe(join(legacyConfigDir, 'skills', 'commit'))
+
+    const agents = [
+      {
+        name: 'test-agent' as const,
+        displayName: 'Test Agent',
+        configDir: '.test-agent',
+        globalConfigDir: agentGlobalDir,
+        detectInstalled: async () => true,
+      },
+    ]
+
+    const result = refreshGlobalAgentSymlinks(legacyConfigDir, newConfigDir, agents)
+
+    expect(result.refreshed).toBe(1)
+    expect(result.agents).toContain('Test Agent')
+
+    // Verify symlink now resolves to new location
+    const resolvedAfter = realpathSync(join(agentSkillsDir, 'commit'))
+    expect(resolvedAfter).toBe(join(newConfigDir, 'skills', 'commit'))
+  })
+
+  it('skips entries that are directories (copy mode), not symlinks', async () => {
+    const legacyConfigDir = join(homeDir, '.config', 'thought-cabinet')
+    const newConfigDir = join(homeDir, '.thought-cabinet')
+
+    await mkdir(join(newConfigDir, 'skills', 'commit'), { recursive: true })
+
+    // Create agent dir with a real directory (copy mode), not a symlink
+    const agentGlobalDir = join(homeDir, '.test-agent')
+    const agentSkillsDir = join(agentGlobalDir, 'skills')
+    await mkdir(join(agentSkillsDir, 'commit'), { recursive: true })
+    await writeFile(join(agentSkillsDir, 'commit', 'SKILL.md'), '# Commit')
+
+    const agents = [
+      {
+        name: 'test-agent' as const,
+        displayName: 'Test Agent',
+        configDir: '.test-agent',
+        globalConfigDir: agentGlobalDir,
+        detectInstalled: async () => true,
+      },
+    ]
+
+    const result = refreshGlobalAgentSymlinks(legacyConfigDir, newConfigDir, agents)
+
+    expect(result.refreshed).toBe(0)
+
+    // Verify directory is untouched
+    expect(existsSync(join(agentSkillsDir, 'commit', 'SKILL.md'))).toBe(true)
+    expect(lstatSync(join(agentSkillsDir, 'commit')).isSymbolicLink()).toBe(false)
+  })
+
+  it('handles agents whose global dirs do not exist', async () => {
+    const legacyConfigDir = join(homeDir, '.config', 'thought-cabinet')
+    const newConfigDir = join(homeDir, '.thought-cabinet')
+
+    const agents = [
+      {
+        name: 'missing-agent' as const,
+        displayName: 'Missing Agent',
+        configDir: '.missing-agent',
+        globalConfigDir: join(homeDir, '.missing-agent'),
+        detectInstalled: async () => false,
+      },
+    ]
+
+    const result = refreshGlobalAgentSymlinks(legacyConfigDir, newConfigDir, agents)
+
+    expect(result.refreshed).toBe(0)
+    expect(result.agents).toHaveLength(0)
+  })
+
+  it('skips symlinks not pointing into legacy config dir', async () => {
+    const legacyConfigDir = join(homeDir, '.config', 'thought-cabinet')
+    const newConfigDir = join(homeDir, '.thought-cabinet')
+
+    // Create a symlink pointing somewhere unrelated
+    const unrelatedDir = join(homeDir, 'unrelated', 'skills', 'custom')
+    await mkdir(unrelatedDir, { recursive: true })
+
+    const agentGlobalDir = join(homeDir, '.test-agent')
+    const agentSkillsDir = join(agentGlobalDir, 'skills')
+    await mkdir(agentSkillsDir, { recursive: true })
+
+    const relPath = relative(agentSkillsDir, unrelatedDir)
+    await symlink(relPath, join(agentSkillsDir, 'custom'))
+
+    const agents = [
+      {
+        name: 'test-agent' as const,
+        displayName: 'Test Agent',
+        configDir: '.test-agent',
+        globalConfigDir: agentGlobalDir,
+        detectInstalled: async () => true,
+      },
+    ]
+
+    const result = refreshGlobalAgentSymlinks(legacyConfigDir, newConfigDir, agents)
+
+    expect(result.refreshed).toBe(0)
+
+    // Verify symlink still points to original location
+    const resolved = realpathSync(join(agentSkillsDir, 'custom'))
+    expect(resolved).toBe(unrelatedDir)
+  })
+})
+
+describe('previewGlobalAgentSymlinks', () => {
+  let homeDir: string
+  const originalEnv = { ...process.env }
+
+  beforeEach(async () => {
+    homeDir = await mkdtemp(join(tmpdir(), 'migrate-preview-'))
+    process.env.HOME = homeDir
+    delete process.env.XDG_CONFIG_HOME
+  })
+
+  afterEach(async () => {
+    process.env = { ...originalEnv }
+    await rm(homeDir, { recursive: true, force: true })
+  })
+
+  it('returns paths of symlinks that point into legacy config dir without modifying them', async () => {
+    const legacyConfigDir = join(homeDir, '.config', 'thought-cabinet')
+
+    // Create legacy skills
+    await mkdir(join(legacyConfigDir, 'skills', 'commit'), { recursive: true })
+    await writeFile(join(legacyConfigDir, 'skills', 'commit', 'SKILL.md'), '# Commit')
+
+    // Create agent dir with symlink pointing to legacy location
+    const agentGlobalDir = join(homeDir, '.test-agent')
+    const agentSkillsDir = join(agentGlobalDir, 'skills')
+    await mkdir(agentSkillsDir, { recursive: true })
+
+    const relPath = relative(agentSkillsDir, join(legacyConfigDir, 'skills', 'commit'))
+    await symlink(relPath, join(agentSkillsDir, 'commit'))
+
+    const agents = [
+      {
+        name: 'test-agent' as const,
+        displayName: 'Test Agent',
+        configDir: '.test-agent',
+        globalConfigDir: agentGlobalDir,
+        detectInstalled: async () => true,
+      },
+    ]
+
+    const result = previewGlobalAgentSymlinks(legacyConfigDir, agents)
+
+    expect(result).toContain(join(agentSkillsDir, 'commit'))
+
+    // Verify symlink was NOT modified (still points to legacy location)
+    const resolved = realpathSync(join(agentSkillsDir, 'commit'))
+    expect(resolved).toBe(join(legacyConfigDir, 'skills', 'commit'))
+  })
+
+  it('returns empty array when no agent symlinks point to legacy dir', async () => {
+    const legacyConfigDir = join(homeDir, '.config', 'thought-cabinet')
+
+    const agents = [
+      {
+        name: 'test-agent' as const,
+        displayName: 'Test Agent',
+        configDir: '.test-agent',
+        globalConfigDir: join(homeDir, '.test-agent'),
+        detectInstalled: async () => true,
+      },
+    ]
+
+    const result = previewGlobalAgentSymlinks(legacyConfigDir, agents)
+
+    expect(result).toHaveLength(0)
   })
 })

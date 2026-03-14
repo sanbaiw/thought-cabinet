@@ -3,7 +3,15 @@ import path from 'path'
 import chalk from 'chalk'
 import * as p from '@clack/prompts'
 import { getDefaultConfigDir, getLegacyConfigDir, ConfigResolver } from '../../config.js'
+import type { RepoMappingObject } from '../../config.js'
 import { expandPath } from './utils/paths.js'
+import { loadThoughtsConfig } from './utils/config.js'
+import { setupThoughtsDirectory } from './init-core.js'
+import { resolveProfileForRepo, getRepoNameFromMapping } from './profile/utils.js'
+import { createThoughtsDirectoryStructure } from './utils/repository.js'
+import { getAllAgents } from '../agent/registry.js'
+import { CATEGORY_SUBDIRS } from '../agent/constants.js'
+import type { AgentConfig } from '../agent/types.js'
 
 interface MigrateOptions {
   dryRun?: boolean
@@ -169,6 +177,190 @@ export function executeMigration(plan: MigrationPlan): void {
   fs.writeFileSync(newConfigPath, JSON.stringify(plan.config, null, 2))
 }
 
+export interface RefreshResult {
+  refreshed: string[]
+  skipped: string[]
+}
+
+interface RefreshableConfig {
+  thoughtsRepo: string
+  reposDir: string
+  globalDir: string
+  user: string
+  repoMappings: Record<string, string | RepoMappingObject>
+  profiles?: Record<string, { thoughtsRepo: string; reposDir: string; globalDir: string }>
+}
+
+/**
+ * Refresh thoughts/ symlinks in registered repos after migration.
+ * Calls setupThoughtsDirectory() for each repo that exists on disk.
+ */
+export function refreshRepoSymlinks(
+  config: RefreshableConfig,
+  affectedRepos: string[],
+): RefreshResult {
+  const refreshed: string[] = []
+  const skipped: string[] = []
+
+  for (const repoPath of affectedRepos) {
+    if (!fs.existsSync(repoPath)) {
+      skipped.push(repoPath)
+      continue
+    }
+
+    const mapping = config.repoMappings[repoPath]
+    const mappedName = getRepoNameFromMapping(mapping)
+    if (!mappedName) {
+      skipped.push(repoPath)
+      continue
+    }
+
+    const profileConfig = resolveProfileForRepo(
+      {
+        thoughtsRepo: config.thoughtsRepo,
+        reposDir: config.reposDir,
+        globalDir: config.globalDir,
+        user: config.user,
+        repoMappings: config.repoMappings,
+        profiles: config.profiles,
+      },
+      repoPath,
+    )
+
+    // Ensure target directories exist in thoughts repo
+    createThoughtsDirectoryStructure(profileConfig, mappedName, config.user)
+
+    // Rebuild thoughts/ symlinks
+    setupThoughtsDirectory({
+      repoPath,
+      profileConfig,
+      mappedName,
+      user: config.user,
+    })
+
+    refreshed.push(repoPath)
+  }
+
+  return { refreshed, skipped }
+}
+
+export interface AgentSymlinkRefreshResult {
+  refreshed: number
+  agents: string[]
+}
+
+type AgentInfo = Pick<AgentConfig, 'displayName' | 'globalConfigDir'>
+
+/**
+ * Refresh global agent asset symlinks that point into the legacy config dir.
+ * Recreates them to point into the new config dir.
+ */
+export function refreshGlobalAgentSymlinks(
+  legacyConfigDir: string,
+  newConfigDir: string,
+  agentList?: AgentInfo[],
+): AgentSymlinkRefreshResult {
+  let refreshed = 0
+  const agents: string[] = []
+  const agentsToScan = agentList || getAllAgents()
+
+  for (const agent of agentsToScan) {
+    if (!agent.globalConfigDir) continue
+    let agentTouched = false
+
+    for (const category of Object.values(CATEGORY_SUBDIRS)) {
+      const categoryDir = path.join(agent.globalConfigDir, category)
+      if (!fs.existsSync(categoryDir)) continue
+
+      const entries = fs.readdirSync(categoryDir, { withFileTypes: true })
+      for (const entry of entries) {
+        const entryPath = path.join(categoryDir, entry.name)
+
+        // Only process symlinks
+        let stats: fs.Stats
+        try {
+          stats = fs.lstatSync(entryPath)
+        } catch {
+          continue
+        }
+        if (!stats.isSymbolicLink()) continue
+
+        // Read the symlink target and resolve to absolute
+        const linkTarget = fs.readlinkSync(entryPath)
+        const resolvedTarget = path.resolve(path.dirname(entryPath), linkTarget)
+
+        // Check if it points into the legacy config dir
+        if (
+          !resolvedTarget.startsWith(legacyConfigDir + path.sep) &&
+          resolvedTarget !== legacyConfigDir
+        ) {
+          continue
+        }
+
+        // Compute the equivalent path in the new config dir
+        const relativeToCfg = path.relative(legacyConfigDir, resolvedTarget)
+        const newTarget = path.join(newConfigDir, relativeToCfg)
+
+        // Verify the new target exists
+        if (!fs.existsSync(newTarget)) continue
+
+        // Recreate the symlink with a relative path to the new target
+        fs.unlinkSync(entryPath)
+        const newRelative = path.relative(path.dirname(entryPath), newTarget)
+        fs.symlinkSync(newRelative, entryPath)
+
+        refreshed++
+        agentTouched = true
+      }
+    }
+
+    if (agentTouched) {
+      agents.push(agent.displayName)
+    }
+  }
+
+  return { refreshed, agents }
+}
+
+/**
+ * Preview which global agent symlinks would be refreshed (read-only scan).
+ * Used for dry-run display.
+ */
+export function previewGlobalAgentSymlinks(
+  legacyConfigDir: string,
+  agentList?: AgentInfo[],
+): string[] {
+  const entries: string[] = []
+  const agentsToScan = agentList || getAllAgents()
+
+  for (const agent of agentsToScan) {
+    if (!agent.globalConfigDir) continue
+
+    for (const category of Object.values(CATEGORY_SUBDIRS)) {
+      const categoryDir = path.join(agent.globalConfigDir, category)
+      if (!fs.existsSync(categoryDir)) continue
+
+      const dirEntries = fs.readdirSync(categoryDir, { withFileTypes: true })
+      for (const entry of dirEntries) {
+        const entryPath = path.join(categoryDir, entry.name)
+        try {
+          const stats = fs.lstatSync(entryPath)
+          if (!stats.isSymbolicLink()) continue
+          const linkTarget = fs.readlinkSync(entryPath)
+          const resolvedTarget = path.resolve(path.dirname(entryPath), linkTarget)
+          if (resolvedTarget.startsWith(legacyConfigDir + path.sep)) {
+            entries.push(entryPath)
+          }
+        } catch {
+          continue
+        }
+      }
+    }
+  }
+
+  return entries
+}
+
 /**
  * Interactive migrate command entry point.
  */
@@ -210,6 +402,27 @@ export async function thoughtsMigrateCommand(options: MigrateOptions): Promise<v
   }
 
   if (options.dryRun) {
+    // Show repo symlinks that would be refreshed
+    if (plan.affectedRepos.length > 0) {
+      p.log.step('Repo symlinks that would be refreshed:')
+      for (const repo of plan.affectedRepos) {
+        if (fs.existsSync(repo)) {
+          p.log.message(chalk.gray(`  ${repo}/thoughts/`))
+        } else {
+          p.log.message(chalk.gray(`  ${repo}/thoughts/ (skipped — repo not found)`))
+        }
+      }
+    }
+
+    // Show agent symlinks that would be refreshed (scan without modifying)
+    const agentPreview = previewGlobalAgentSymlinks(plan.legacyConfigDir)
+    if (agentPreview.length > 0) {
+      p.log.step('Global agent symlinks that would be refreshed:')
+      for (const entry of agentPreview) {
+        p.log.message(chalk.gray(`  ${entry}`))
+      }
+    }
+
     p.log.info('Dry run — no changes made.')
     return
   }
@@ -243,13 +456,30 @@ export async function thoughtsMigrateCommand(options: MigrateOptions): Promise<v
     // Ignore cleanup errors
   }
 
-  // Warn about broken symlinks
+  // Refresh repo symlinks
   if (plan.affectedRepos.length > 0) {
-    p.log.warn('Symlinks in existing repos now point to the old location.')
-    p.log.info('Re-run `thc thoughts init --force` in each affected repo:')
-    for (const repo of plan.affectedRepos) {
-      p.log.message(chalk.gray(`  cd ${repo} && thc thoughts init --force`))
+    const config = loadThoughtsConfig({ configFile: path.join(plan.newConfigDir, 'config.json') })
+    if (config) {
+      p.log.step('Refreshing thoughts symlinks in registered repos...')
+      const repoResult = refreshRepoSymlinks(config, plan.affectedRepos)
+      for (const repo of repoResult.refreshed) {
+        p.log.success(`Refreshed: ${repo}`)
+      }
+      for (const repo of repoResult.skipped) {
+        p.log.warn(`Skipped (not found): ${repo}`)
+      }
     }
+  }
+
+  // Refresh global agent symlinks
+  p.log.step('Refreshing global agent symlinks...')
+  const agentResult = refreshGlobalAgentSymlinks(plan.legacyConfigDir, plan.newConfigDir)
+  if (agentResult.refreshed > 0) {
+    p.log.success(
+      `Refreshed ${agentResult.refreshed} symlink(s) for: ${agentResult.agents.join(', ')}`,
+    )
+  } else {
+    p.log.info('No global agent symlinks needed updating.')
   }
 
   p.outro(chalk.green('Migration complete!'))
