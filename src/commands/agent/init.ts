@@ -60,33 +60,26 @@ export async function bootstrapAssetsIfNeeded(
 
 /**
  * Resolve the source directory for agent assets.
- * Priority: --source flag > config dir (with asset subdirs) > bootstrap from bundled > bundled fallback.
+ * Priority: config dir (with asset subdirs) > bootstrap from bundled > bundled fallback.
  *
  * Optional configDir and bundledDir parameters override defaults for testability.
  */
 export async function resolveSourceDir(
-  customSource?: string,
   configDir?: string,
   bundledDir?: string | null,
 ): Promise<string | null> {
-  // Priority 1: explicit --source flag
-  if (customSource) {
-    const resolved = resolve(customSource)
-    return existsSync(resolved) ? resolved : null
-  }
-
   const config = configDir ?? getDefaultConfigDir()
   const bundled = bundledDir === undefined ? getBundledAssetsDir() : bundledDir
 
-  // Priority 2: config directory already has asset subdirectories
+  // Priority 1: config directory already has asset subdirectories
   const hasAssets = ASSET_CATEGORIES.some(cat => existsSync(join(config, cat)))
   if (hasAssets) return config
 
-  // Priority 3: bootstrap bundled assets into config dir
+  // Priority 2: bootstrap bundled assets into config dir
   const bootstrapped = await bootstrapAssetsIfNeeded(config, bundled)
   if (bootstrapped) return bootstrapped
 
-  // Priority 4: fall back to bundled assets directly
+  // Priority 3: fall back to bundled assets directly
   return bundled
 }
 
@@ -108,14 +101,10 @@ export async function agentInitCommand(options: AgentInitOptions): Promise<void>
       process.exit(1)
     }
 
-    const sourceDir = await resolveSourceDir(options.source)
+    const sourceDir = await resolveSourceDir()
     if (!sourceDir) {
-      p.log.error('Source directory not found.')
-      if (options.source) {
-        p.log.info(`Specified path: ${options.source}`)
-      } else {
-        p.log.info('Bundled agent assets not found. Are you running from the package?')
-      }
+      p.log.error('Agent assets not found.')
+      p.log.info('Bundled agent assets not found. Are you running from the package?')
       process.exit(1)
     }
 

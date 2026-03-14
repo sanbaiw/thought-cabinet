@@ -42,7 +42,7 @@ const OPTIONS: Record<string, string[]> = {
   'worktree list': ['--all'],
   'worktree merge': ['--into', '--force', '--keep-session', '--keep-worktree', '--keep-branch'],
   'worktree remove': ['--force'],
-  'agent init': ['--force', '--all', '--target', '--global', '--mode', '--source'],
+  'agent init': ['--force', '--all', '--target', '--global', '--mode'],
 }
 
 // Commands that expect dynamic arguments

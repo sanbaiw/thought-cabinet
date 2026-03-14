@@ -98,7 +98,6 @@ thc agent init --force                  # Overwrite existing installations
 | `--target <agents...>` | Target agents (e.g., `claude-code`, `codebuddy`, `cursor`, `codex`, `gemini-cli`, `cline`) |
 | `-g, --global`         | Install to global scope                                                                    |
 | `--mode <mode>`        | Installation mode: `symlink` (default) or `copy`                                           |
-| `--source <path>`      | Source directory for assets                                                                |
 | `--force`              | Force overwrite of existing installations                                                  |
 | `--all`                | Install all assets without prompting                                                       |
 

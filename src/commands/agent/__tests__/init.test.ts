@@ -113,75 +113,49 @@ describe('bootstrapAssetsIfNeeded', () => {
 describe('resolveSourceDir', () => {
   let tempConfigDir: string
   let tempBundledDir: string
-  let tempSourceDir: string
 
   beforeEach(async () => {
     tempConfigDir = await mkdtemp(join(tmpdir(), 'resolve-config-'))
     tempBundledDir = await mkdtemp(join(tmpdir(), 'resolve-bundled-'))
-    tempSourceDir = await mkdtemp(join(tmpdir(), 'resolve-source-'))
 
     await createBundledAssets(tempBundledDir)
-
-    await mkdir(join(tempSourceDir, 'skills', 'custom'), { recursive: true })
-    await writeFile(
-      join(tempSourceDir, 'skills', 'custom', 'SKILL.md'),
-      '---\nname: custom\ndescription: Custom\n---\n# Custom',
-    )
   })
 
   afterEach(async () => {
     await rm(tempConfigDir, { recursive: true, force: true })
     await rm(tempBundledDir, { recursive: true, force: true })
-    await rm(tempSourceDir, { recursive: true, force: true })
   })
 
-  it('should return --source path when provided (priority 1)', async () => {
-    const result = await resolveSourceDir(tempSourceDir, tempConfigDir, tempBundledDir)
-    expect(result).toBe(tempSourceDir)
-  })
-
-  it('should return null for non-existent --source path', async () => {
-    const result = await resolveSourceDir('/non/existent/path', tempConfigDir, tempBundledDir)
-    expect(result).toBeNull()
-  })
-
-  it('should return config dir when it has agents/ subdir (priority 2)', async () => {
+  it('should return config dir when it has agents/ subdir (priority 1)', async () => {
     await mkdir(join(tempConfigDir, 'agents', 'my-agent'), { recursive: true })
 
-    const result = await resolveSourceDir(undefined, tempConfigDir, tempBundledDir)
+    const result = await resolveSourceDir(tempConfigDir, tempBundledDir)
     expect(result).toBe(tempConfigDir)
   })
 
-  it('should return config dir when it has skills/ subdir (priority 2)', async () => {
+  it('should return config dir when it has skills/ subdir (priority 1)', async () => {
     await mkdir(join(tempConfigDir, 'skills', 'my-skill'), { recursive: true })
 
-    const result = await resolveSourceDir(undefined, tempConfigDir, tempBundledDir)
+    const result = await resolveSourceDir(tempConfigDir, tempBundledDir)
     expect(result).toBe(tempConfigDir)
   })
 
-  it('should bootstrap and return config dir when config dir has no asset subdirs (priority 3)', async () => {
-    const result = await resolveSourceDir(undefined, tempConfigDir, tempBundledDir)
+  it('should bootstrap and return config dir when config dir has no asset subdirs (priority 2)', async () => {
+    const result = await resolveSourceDir(tempConfigDir, tempBundledDir)
 
     expect(result).toBe(tempConfigDir)
     expect(existsSync(join(tempConfigDir, 'agents', 'analyzer'))).toBe(true)
     expect(existsSync(join(tempConfigDir, 'skills', 'commit'))).toBe(true)
   })
 
-  it('should return null when bundled dir is null and config dir is empty (priority 4)', async () => {
-    const result = await resolveSourceDir(undefined, tempConfigDir, null)
+  it('should return null when bundled dir is null and config dir is empty (priority 3)', async () => {
+    const result = await resolveSourceDir(tempConfigDir, null)
     expect(result).toBeNull()
-  })
-
-  it('should prefer --source over config dir even if config dir has assets', async () => {
-    await mkdir(join(tempConfigDir, 'skills', 'existing'), { recursive: true })
-
-    const result = await resolveSourceDir(tempSourceDir, tempConfigDir, tempBundledDir)
-    expect(result).toBe(tempSourceDir)
   })
 
   it('should use config dir after bootstrap without re-bootstrapping on subsequent calls', async () => {
     // First call triggers bootstrap
-    await resolveSourceDir(undefined, tempConfigDir, tempBundledDir)
+    await resolveSourceDir(tempConfigDir, tempBundledDir)
     expect(existsSync(join(tempConfigDir, 'skills', 'commit'))).toBe(true)
 
     // User adds a custom skill
@@ -191,8 +165,8 @@ describe('resolveSourceDir', () => {
       '---\nname: my-custom-skill\ndescription: Custom\n---\n# Custom',
     )
 
-    // Second call uses config dir directly (priority 2), preserving custom skill
-    const result = await resolveSourceDir(undefined, tempConfigDir, tempBundledDir)
+    // Second call uses config dir directly (priority 1), preserving custom skill
+    const result = await resolveSourceDir(tempConfigDir, tempBundledDir)
     expect(result).toBe(tempConfigDir)
     expect(existsSync(join(tempConfigDir, 'skills', 'my-custom-skill', 'SKILL.md'))).toBe(true)
     expect(existsSync(join(tempConfigDir, 'skills', 'commit', 'SKILL.md'))).toBe(true)

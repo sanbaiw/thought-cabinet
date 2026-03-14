@@ -12,7 +12,6 @@ export function agentCommand(program: Command): void {
     .option('--target <agents...>', 'Target agents (e.g., claude-code codebuddy)')
     .option('-g, --global', 'Install to global scope')
     .option('--mode <mode>', 'Installation mode: symlink or copy (default: symlink)')
-    .option('--source <path>', 'Source directory for assets')
     .option('--force', 'Force overwrite of existing installations')
     .option('--all', 'Install all assets without prompting')
     .action(async options => {
@@ -37,7 +36,6 @@ export function agentCommand(program: Command): void {
         agents: agentTypes,
         scope: options.global ? 'global' : undefined,
         mode,
-        source: options.source,
         force: options.force,
         all: options.all,
       })

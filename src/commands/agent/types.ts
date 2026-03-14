@@ -55,6 +55,4 @@ export interface AgentInitOptions {
   force?: boolean
   /** Install all assets without prompting */
   all?: boolean
-  /** Source path for assets (defaults to bundled assets) */
-  source?: string
 }
