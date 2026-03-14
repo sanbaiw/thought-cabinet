@@ -75,13 +75,27 @@ thc prune --apply  # Actually remove stale mappings
 | `--apply`              | Apply changes (default is dry-run) |
 | `--config-file <path>` | Path to config file                |
 
+### `thc migrate`
+
+Migrate configuration from `~/.config/thought-cabinet/` to `~/.thought-cabinet/`. Moves config file, agent assets, and thoughts repos, then updates all paths in the config.
+
+```bash
+thc migrate            # Interactive migration with confirmation
+thc migrate --dry-run  # Show what would be migrated without changes
+```
+
+| Flag                   | Description                                |
+| ---------------------- | ------------------------------------------ |
+| `--dry-run`            | Show migration plan without making changes |
+| `--config-file <path>` | Path to legacy config file                 |
+
 ## Agent Configuration
 
 ### `thc agent init`
 
 Interactively discover and install skills and agents to your AI coding agent's config directory.
 
-Assets are installed via **symlink** by default: a canonical copy is stored in `.thought-cabinet/` (project) or `~/.config/thought-cabinet/` (global), and symlinks are created in the agent's config directory. This means updating the canonical copy updates all agents at once.
+Assets are installed via **symlink** by default: a canonical copy is stored in `.thought-cabinet/` (project) or `~/.thought-cabinet/` (global), and symlinks are created in the agent's config directory. This means updating the canonical copy updates all agents at once.
 
 ```bash
 thc agent init                          # Interactive installation
@@ -238,7 +252,7 @@ thc config --json    # Output as JSON
 | `--json`               | Output configuration as JSON |
 | `--config-file <path>` | Path to config file          |
 
-Configuration is stored at `~/.config/thought-cabinet/config.json` (respects `XDG_CONFIG_HOME`).
+Configuration is stored at `~/.thought-cabinet/config.json` (falls back to `~/.config/thought-cabinet/config.json`; respects `XDG_CONFIG_HOME`).
 
 ## Hooks
 

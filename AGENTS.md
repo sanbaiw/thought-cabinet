@@ -64,7 +64,7 @@ Entry point: `src/index.ts` - Registers six command groups:
 
 ### Configuration
 
-Config file location: `~/.config/thought-cabinet/config.json` (XDG_CONFIG_HOME respected)
+Config file location: `~/.thought-cabinet/config.json` (falls back to `~/.config/thought-cabinet/config.json` for existing installs; `XDG_CONFIG_HOME` respected)
 
 Key config structure:
 

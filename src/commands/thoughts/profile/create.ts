@@ -1,12 +1,13 @@
 import chalk from 'chalk'
+import path from 'path'
 import * as p from '@clack/prompts'
 import {
   loadThoughtsConfig,
   saveThoughtsConfig,
-  getDefaultThoughtsRepo,
   ensureThoughtsRepoExists,
 } from '../utils/index.js'
 import { sanitizeProfileName, validateProfile } from './utils.js'
+import { getDefaultConfigDir } from '../../../config.js'
 import type { ProfileConfig } from '../../../config'
 
 interface CreateOptions {
@@ -66,7 +67,7 @@ export async function profileCreateCommand(
       globalDir = options.globalDir
     } else {
       // Interactive mode
-      const defaultRepo = getDefaultThoughtsRepo() + `-${sanitizedName}`
+      const defaultRepo = path.join(getDefaultConfigDir(), `thoughts-${sanitizedName}`)
       p.log.info('Specify the thoughts repository location for this profile.')
 
       const repoInput = await p.text({

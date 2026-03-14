@@ -1,12 +1,13 @@
 import path from 'path'
 import os from 'os'
 import type { ResolvedProfileConfig } from './config.js'
+import { getDefaultConfigDir } from '../../../config.js'
 
 // Re-export getMainRepoPath from git module for backward compatibility
 export { getMainRepoPath } from '../../../git.js'
 
 export function getDefaultThoughtsRepo(): string {
-  return path.join(os.homedir(), 'thoughts')
+  return path.join(getDefaultConfigDir(), 'thoughts')
 }
 
 export function expandPath(filePath: string): string {

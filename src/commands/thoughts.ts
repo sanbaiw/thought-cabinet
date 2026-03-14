@@ -5,6 +5,7 @@ import { thoughtsSyncCommand } from './thoughts/sync.js'
 import { thoughtsStatusCommand } from './thoughts/status.js'
 import { thoughtsConfigCommand } from './thoughts/config.js'
 import { thoughtsPruneCommand } from './thoughts/prune.js'
+import { thoughtsMigrateCommand } from './thoughts/migrate.js'
 import { profileCreateCommand } from './thoughts/profile/create.js'
 import { profileListCommand } from './thoughts/profile/list.js'
 import { profileShowCommand } from './thoughts/profile/show.js'
@@ -60,6 +61,13 @@ export function thoughtsCommand(program: Command): void {
     .option('--apply', 'Apply changes (default is dry-run)')
     .option('--config-file <path>', 'Path to config file')
     .action(thoughtsPruneCommand)
+
+  cmd
+    .command('migrate')
+    .description('Migrate configuration from ~/.config/thought-cabinet/ to ~/.thought-cabinet/')
+    .option('--dry-run', 'Show what would be migrated without making changes')
+    .option('--config-file <path>', 'Path to legacy config file')
+    .action(thoughtsMigrateCommand)
 
   // Profile management commands
   const profile = cmd.command('profile').description('Manage thoughts profiles')
