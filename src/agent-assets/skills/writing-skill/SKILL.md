@@ -26,7 +26,7 @@ Infer from user query:
 - "revise", "update", "fix", "improve", "modify" → Step 2  
 - "distill", "extract", "turn into skill" → Step 3
 
-Only ask if ambiguous: "What would you like to do? (create new / revise existing / distill from session)"
+Only ask if ambiguous.
 
 ---
 
@@ -59,15 +59,25 @@ Save to `$THC_SKILLS_DIR/[skill-name]/`.
 
 ### 1c. Research Patterns
 
-Run in parallel:
-- `codebase-pattern-finder`: Search `$THC_SKILLS_DIR` and `src/agent-assets/skills/` for analogs
-- `codebase-analyzer`: Understand infrastructure (discovery.ts, installer.ts, types.ts)
+Spawn parallel research tasks:
 
-Choose analog:
-- Multi-phase → `creating-plan`
-- Simple imperative → `commit`
-- Research/synthesis → `researching-codebase`
-- Integration → `test-driven-development`
+**Task 1: Find analog skills**
+Search `$THC_SKILLS_DIR` and `src/agent-assets/skills/` for similar workflow patterns. Look for:
+- Similar task structure (phases, steps, decisions)
+- Similar complexity (simple/imperative vs multi-phase)
+- Similar interaction patterns (user prompts, validation)
+
+**Task 2: Understand infrastructure**
+Study how skills work:
+- Discovery: `src/commands/agent/discovery.ts` — how skills are located
+- Installation: `src/commands/agent/installer.ts` — how skills are installed
+- Types: `src/commands/agent/types.ts` — interfaces used
+
+**Choose analog** based on characteristics:
+- Multi-phase workflow → model after `creating-plan`
+- Simple imperative → model after `commit`
+- Research/synthesis → model after `researching-codebase`
+- Integration-focused → model after `test-driven-development`
 
 ### 1d. Design Present
 
