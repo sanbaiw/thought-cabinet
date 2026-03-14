@@ -9,11 +9,11 @@ Create new skills, revise existing ones, or distill workflows into reusable skil
 
 ## Workflow Context
 
-This meta-skill produces skills for the agent ecosystem:
-- `creating-plan` / `implementing-plan` / `validating-plan` — Complex workflow models
-- `researching-codebase` — Research/synthesis model
-- `commit` — Simple imperative model
-- `test-driven-development` — Integration-focused model
+This meta-skill produces skills. Common skill patterns:
+- **Complex workflow** — Multiple phases, planning/implementation/validation
+- **Research/synthesis** — Discovery, analysis, pattern extraction
+- **Simple imperative** — Single task, straightforward execution
+- **Integration-focused** — Modifies/enhances other workflows
 
 **Skills are saved to your Thought Cabinet skills directory**:
 - `~/.thought-cabinet/skills/` (new)
@@ -74,17 +74,17 @@ Study how skills work:
 - Types: `src/commands/agent/types.ts` — interfaces used
 
 **Choose analog** based on characteristics:
-- Multi-phase workflow → model after `creating-plan`
-- Simple imperative → model after `commit`
-- Research/synthesis → model after `researching-codebase`
-- Integration-focused → model after `test-driven-development`
+- Multi-phase workflow → find complex workflow skills
+- Simple imperative → find single-task skills
+- Research/synthesis → find discovery/analysis skills
+- Integration-focused → find skills that modify/enhance other workflows
 
 ### 1d. Design Present
 
 ```
 **Name**: kebab-case-name
 **Description**: Third-person, specific, includes triggers
-**Modeled after**: [skill] + rationale
+**Modeled after**: [skill pattern] + rationale
 **Save to**: $THC_SKILLS_DIR/[skill-name]
 
 **Workflow**:
