@@ -59,19 +59,18 @@ Save to `$THC_SKILLS_DIR/[skill-name]/`.
 
 ### 1c. Research Patterns
 
-Spawn parallel research tasks:
+Spawn parallel searches for analog skills in each skill directory:
 
-**Task 1: Find analog skills**
-Search `$THC_SKILLS_DIR` and `src/agent-assets/skills/` for similar workflow patterns. Look for:
+**Search 1: Local skills** (`$THC_SKILLS_DIR`)
+Find skills similar to what you're building:
 - Similar task structure (phases, steps, decisions)
 - Similar complexity (simple/imperative vs multi-phase)
 - Similar interaction patterns (user prompts, validation)
 
-**Task 2: Understand infrastructure**
-Study how skills work:
-- Discovery: `src/commands/agent/discovery.ts` — how skills are located
-- Installation: `src/commands/agent/installer.ts` — how skills are installed
-- Types: `src/commands/agent/types.ts` — interfaces used
+**Search 2: Bundled skills** (if accessible)
+Search the project's skill source for additional examples:
+- `src/agent-assets/skills/` or similar directories
+- Look for the same characteristics as Search 1
 
 **Choose analog** based on characteristics:
 - Multi-phase workflow → find complex workflow skills
