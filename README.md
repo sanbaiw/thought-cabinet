@@ -30,7 +30,7 @@ pnpm install -g thought-cabinet
 thc init
 
 # 3. Install skills to your AI agent
-thc agent init
+thc skill install
 
 # 4. Use skills in your agent session (e.g. Claude Code)
 > /research-codebase How does the authentication system work?
@@ -41,7 +41,7 @@ thc agent init
 
 ## Skills
 
-Skills are installed by `thc agent init` and invoked as slash commands in your agent session:
+Skills are installed by `thc skill install` and invoked as slash commands in your agent session:
 
 | Skill                | Description                                                           |
 | -------------------- | --------------------------------------------------------------------- |
@@ -89,13 +89,14 @@ Research and plans are written to disk. The agent reads back only what it needs,
 
 ## CLI Overview
 
-| Command          | Description                                       |
-| ---------------- | ------------------------------------------------- |
-| `thc init`       | Initialize thoughts for current repository        |
-| `thc sync`       | Sync thoughts to git repository                   |
-| `thc status`     | Show thoughts repository status                   |
-| `thc agent init` | Install skills and agents to your AI coding agent |
-| `thc config`     | View or edit configuration                        |
+| Command             | Description                                        |
+| ------------------- | -------------------------------------------------- |
+| `thc init`          | Initialize thoughts for current repository         |
+| `thc sync`          | Sync thoughts to git repository                    |
+| `thc status`        | Show thoughts repository status                    |
+| `thc skill install` | Install skills and agents to your AI coding agent  |
+| `thc skill update`  | Update installed skills from latest package bundle |
+| `thc config`        | View or edit configuration                         |
 
 See [docs/CLI.md](docs/CLI.md) for the full command reference with all flags and options.
 

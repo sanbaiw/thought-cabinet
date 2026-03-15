@@ -12,7 +12,7 @@ const TOP_LEVEL_COMMANDS = [
   'migrate',
   'profile',
   'worktree',
-  'agent',
+  'skill',
   'metadata',
   'hooks',
   'completion',
@@ -22,7 +22,7 @@ const TOP_LEVEL_COMMANDS = [
 const SUBCOMMANDS: Record<string, string[]> = {
   profile: ['create', 'list', 'show', 'delete'],
   worktree: ['add', 'list', 'merge', 'remove'],
-  agent: ['init'],
+  skill: ['install', 'update'],
   hooks: ['init'],
   completion: ['install', 'uninstall'],
 }
@@ -44,7 +44,8 @@ const OPTIONS: Record<string, string[]> = {
   'worktree list': ['--all'],
   'worktree merge': ['--into', '--force', '--keep-session', '--keep-worktree', '--keep-branch'],
   'worktree remove': ['--force'],
-  'agent init': ['--force', '--all', '--target', '--global', '--mode'],
+  'skill install': ['--force', '--all', '--target', '--global', '--mode'],
+  'skill update': ['--all'],
 }
 
 // Commands that expect dynamic arguments

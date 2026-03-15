@@ -2,7 +2,7 @@
 
 import { Command } from 'commander'
 import { thoughtsCommand } from './commands/thoughts.js'
-import { agentCommand } from './commands/agent.js'
+import { skillCommand } from './commands/agent.js'
 import { metadataCommand } from './commands/metadata.js'
 import { worktreeCommand } from './commands/worktree.js'
 import { hooksCommand } from './commands/hooks.js'
@@ -35,7 +35,7 @@ async function main(): Promise<void> {
 
   // Add commands
   thoughtsCommand(program)
-  agentCommand(program)
+  skillCommand(program)
   metadataCommand(program)
   worktreeCommand(program)
   hooksCommand(program)

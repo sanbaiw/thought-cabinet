@@ -34,7 +34,7 @@ node dist/index.js <command>
 Entry point: `src/index.ts` - Registers six command groups:
 
 - `thoughtsCommand` - Core thoughts management (init, sync, status, config, destroy, prune, profile)
-- `agentCommand` - AI agent configuration management (init)
+- `skillCommand` - Skill and agent asset management (install, update)
 - `metadataCommand` - Repository metadata utilities
 - `worktreeCommand` - Git worktree management bound to tmux sessions (add, list, merge, remove)
 - `hooksCommand` - Hook configuration management (init)
@@ -99,7 +99,7 @@ Supported agents: `claude-code`, `codebuddy`, `cursor`, `codex`, `gemini-cli`, `
 
 Each agent defines: name, displayName, configDir (project-level), globalConfigDir (global-level), and detectInstalled function.
 
-### Agent Init (`src/commands/agent/init.ts`)
+### Skill Install (`src/commands/agent/init.ts`)
 
 Interactive CLI for installing agent assets (skills, agents) to an agent's config directory. Supports:
 
@@ -158,7 +158,7 @@ When CLI commands change (new flags, renamed options, removed features), these f
 
 ### Shell Completion (`src/completion/handler.ts`)
 
-- `OPTIONS` dict: maps command keys (e.g. `'agent init'`) to their CLI flags
+- `OPTIONS` dict: maps command keys (e.g. `'skill install'`) to their CLI flags
 - `DYNAMIC_OPTIONS` dict: maps flags that accept dynamic values to provider functions (e.g. `'--target': getAgentNames`)
 - `DYNAMIC_ARGS` dict: maps commands that accept positional dynamic args to providers
 
@@ -169,8 +169,8 @@ When CLI commands change (new flags, renamed options, removed features), these f
 
 ### README (`README.md`)
 
-- "Installing Agent Configuration" section: describes what `thc agent init` installs and its options
-- "CLI Commands > Agent Configuration" section: quick-reference for `agent init` flags
+- "Installing Agent Configuration" section: describes what `thc skill install` installs and its options
+- "CLI Commands > Agent Configuration" section: quick-reference for `skill install` flags
 - Keep both sections consistent with the actual Commander.js option definitions in `src/commands/agent.ts`
 
 ### General rule

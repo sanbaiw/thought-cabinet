@@ -32,3 +32,6 @@ export {
   discoverMarkdownAssets,
   discoverAllAssets,
 } from './discovery.js'
+
+// Update
+export { updateBundledAssets, detectInstallTargets, skillUpdateCommand } from './update.js'
