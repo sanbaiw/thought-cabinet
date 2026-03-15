@@ -30,7 +30,14 @@ The procedure for each unit of work:
 
 After all TDD cycles in the phase are complete, run the phase's automated verification commands as the final gate.
 
-**Resolving conflicts with the plan**: If the plan says "no tests needed", evaluate independently — apply TDD unless genuinely untestable (pure wiring, no behavioral logic). Document any skip with a reason in the phase completion message.
+**Resolving conflicts with the plan**: If the plan says "no tests needed", evaluate independently. The plan may be wrong — verify by reading existing test files. Apply TDD unless the code meets ALL of these criteria:
+1. Zero conditional logic (no if/else, no switches, no ternaries, no loops with conditions)
+2. Zero data transformation (no mapping, filtering, formatting, restructuring)
+3. The function is a pure pass-through that only calls other already-tested functions with static arguments
+
+"Wiring", "integration-level", "mostly delegation", and "would require too many mocks" are NOT valid reasons to skip TDD. If mocking is hard, that's a design signal — simplify the interface or extract testable units.
+
+**When skipping TDD**: Document the skip in the phase completion message with the specific criteria met (1-3 above). If you cannot clearly articulate which criterion applies, you must write tests.
 
 ## Getting Started
 
@@ -38,9 +45,10 @@ When given a plan path:
 
 1. Read the plan completely - check for existing checkmarks (- [x])
 2. Read ALL files mentioned in the plan without limit/offset
-3. Understand how the pieces fit together
-4. Create a todo list to track progress
-5. Begin implementation of the **first uncompleted phase only**
+3. **Read existing test files** for every module the plan modifies (use glob: `**/__tests__/*`, `**/*.test.*`, `**/*.spec.*` near changed files). This is mandatory — never assume "no tests exist" without checking.
+4. Understand how the pieces fit together
+5. Create a todo list to track progress
+6. Begin implementation of the **first uncompleted phase only**
 
 If no plan path provided, ask for one:
 
@@ -81,9 +89,10 @@ How should I proceed?
 
 Before writing any production code for a phase:
 
-1. Identify the testable behaviors the phase introduces or changes
-2. Apply the `test-driven-development` RED-GREEN-REFACTOR cycle for each behavior
-3. Only after all TDD cycles are complete, proceed to the completion checklist below
+1. Read existing test files for the modules being changed (if not already read in Getting Started)
+2. Identify the testable behaviors the phase introduces or changes
+3. Apply the `test-driven-development` RED-GREEN-REFACTOR cycle for each behavior
+4. Only after all TDD cycles are complete, proceed to the completion checklist below
 
 ## Phase Completion Checklist
 
