@@ -1,6 +1,6 @@
 {
   "name": "thought-cabinet",
-  "version": "0.1.13",
+  "version": "0.2.0",
   "description": "Thought Cabinet (thc) — CLI for structured AI coding workflows with filesystem-based memory and context management.",
   "type": "module",
   "main": "dist/index.js",
