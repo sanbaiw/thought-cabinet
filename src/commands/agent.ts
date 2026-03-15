@@ -1,20 +1,19 @@
 import { Command } from 'commander'
 import { agentInitCommand } from './agent/init.js'
+import { skillUpdateCommand } from './agent/update.js'
 import type { AgentType, InstallMode } from './agent/types.js'
 import { isValidAgentType } from './agent/registry.js'
 
-export function agentCommand(program: Command): void {
-  const agent = program.command('agent').description('Manage coding agent configuration')
+export function skillCommand(program: Command): void {
+  const skill = program.command('skill').description('Manage skill and agent asset installation')
 
-  agent
-    .command('init')
-    .description('Initialize coding agent configuration in current directory')
+  skill
+    .command('install')
+    .description('Install skills and agent configs to target agent directories')
     .option('--target <agents...>', 'Target agents (e.g., claude-code codebuddy)')
     .option('-g, --global', 'Install to global scope')
     .option('--mode <mode>', 'Installation mode: symlink or copy (default: symlink)')
-    .option('--source <path>', 'Source directory for assets')
     .option('--force', 'Force overwrite of existing installations')
-    .option('--all', 'Install all assets without prompting')
     .action(async options => {
       const agentTypes: AgentType[] | undefined = options.target?.map((a: string) => {
         if (!isValidAgentType(a)) {
@@ -37,9 +36,15 @@ export function agentCommand(program: Command): void {
         agents: agentTypes,
         scope: options.global ? 'global' : undefined,
         mode,
-        source: options.source,
         force: options.force,
-        all: options.all,
       })
+    })
+
+  skill
+    .command('update')
+    .description('Update skills from package bundle and refresh installations')
+    .option('--all', 'Update all registered repos (from config repoMappings)')
+    .action(async options => {
+      await skillUpdateCommand({ all: options.all })
     })
 }

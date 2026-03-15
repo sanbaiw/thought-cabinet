@@ -198,4 +198,9 @@ When working within a plan phase:
 
 The phase's automated verification is the final gate. TDD cycles happen within that gate, not instead of it.
 
-**When the plan says tests aren't needed**: Evaluate independently — apply TDD unless genuinely untestable (pure wiring, no behavioral logic). Document any skip with a reason in the phase completion message.
+**When the plan says tests aren't needed**: Evaluate independently — the plan may be wrong. Read existing test files first. Apply TDD unless the code meets ALL of these criteria:
+1. Zero conditional logic (no if/else, switches, ternaries, or loops with conditions)
+2. Zero data transformation (no mapping, filtering, formatting, restructuring)
+3. The function is a pure pass-through calling already-tested functions with static arguments
+
+"Wiring", "integration-level", "mostly delegation", and "would require too many mocks" are NOT valid skip reasons. Document any skip with the specific criterion (1-3) that applies.

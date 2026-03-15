@@ -41,6 +41,8 @@ export interface Asset {
 export interface InstallResult {
   success: boolean
   path: string
+  /** Path to canonical storage (project-scope symlink mode only) */
+  canonicalPath?: string
   mode: InstallMode
   /** True if symlink was attempted but fell back to copy */
   symlinkFailed?: boolean
@@ -53,8 +55,4 @@ export interface AgentInitOptions {
   scope?: InstallScope
   mode?: InstallMode
   force?: boolean
-  /** Install all assets without prompting */
-  all?: boolean
-  /** Source path for assets (defaults to bundled assets) */
-  source?: string
 }

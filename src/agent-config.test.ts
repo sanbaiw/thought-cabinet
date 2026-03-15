@@ -32,15 +32,47 @@ describe('copyAgentConfigDirs', () => {
     expect(fs.existsSync(path.join(targetDir, '.claude', 'settings.json'))).toBe(true)
   })
 
-  it('should not copy .thought-cabinet directory', () => {
-    // .thought-cabinet exists in source but should NOT be copied
-    const canonical = path.join(sourceDir, '.thought-cabinet', 'agents', 'my-agent')
+  it('should copy .thought-cabinet directory to worktree', () => {
+    // .thought-cabinet exists in source and should be copied
+    const canonical = path.join(sourceDir, '.thought-cabinet', 'skills', 'my-skill')
     fs.mkdirSync(canonical, { recursive: true })
-    fs.writeFileSync(path.join(canonical, 'my-agent.md'), '# My Agent')
+    fs.writeFileSync(path.join(canonical, 'SKILL.md'), '# My Skill')
 
-    copyAgentConfigDirs({ sourceDir, targetDir })
+    const result = copyAgentConfigDirs({ sourceDir, targetDir })
 
-    expect(fs.existsSync(path.join(targetDir, '.thought-cabinet'))).toBe(false)
+    expect(result.copied).toContain('.thought-cabinet')
+    expect(
+      fs.existsSync(path.join(targetDir, '.thought-cabinet', 'skills', 'my-skill', 'SKILL.md')),
+    ).toBe(true)
+  })
+
+  it('should resolve symlinks from .claude to .thought-cabinet after worktree copy', () => {
+    // Setup: .thought-cabinet/skills/foo with content
+    const canonicalSkill = path.join(sourceDir, '.thought-cabinet', 'skills', 'foo')
+    fs.mkdirSync(canonicalSkill, { recursive: true })
+    fs.writeFileSync(path.join(canonicalSkill, 'SKILL.md'), '# Foo')
+
+    // Setup: .claude/skills/foo -> ../../.thought-cabinet/skills/foo (relative symlink)
+    const skillsDir = path.join(sourceDir, '.claude', 'skills')
+    fs.mkdirSync(skillsDir, { recursive: true })
+    const relTarget = path.relative(skillsDir, canonicalSkill)
+    fs.symlinkSync(relTarget, path.join(skillsDir, 'foo'))
+
+    const result = copyAgentConfigDirs({ sourceDir, targetDir })
+
+    expect(result.copied).toContain('.claude')
+    expect(result.copied).toContain('.thought-cabinet')
+
+    // Verify the symlink in the target worktree resolves correctly
+    const targetSymlink = path.join(targetDir, '.claude', 'skills', 'foo')
+    expect(fs.lstatSync(targetSymlink).isSymbolicLink()).toBe(true)
+
+    // The relative symlink should resolve to the copied .thought-cabinet in the target
+    const resolved = fs.realpathSync(targetSymlink)
+    expect(resolved).toBe(
+      fs.realpathSync(path.join(targetDir, '.thought-cabinet', 'skills', 'foo')),
+    )
+    expect(fs.readFileSync(path.join(resolved, 'SKILL.md'), 'utf8')).toBe('# Foo')
   })
 
   it('should preserve symlinks as-is', () => {

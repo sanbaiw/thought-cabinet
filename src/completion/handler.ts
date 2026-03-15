@@ -9,9 +9,10 @@ const TOP_LEVEL_COMMANDS = [
   'status',
   'config',
   'prune',
+  'migrate',
   'profile',
   'worktree',
-  'agent',
+  'skill',
   'metadata',
   'hooks',
   'completion',
@@ -21,7 +22,7 @@ const TOP_LEVEL_COMMANDS = [
 const SUBCOMMANDS: Record<string, string[]> = {
   profile: ['create', 'list', 'show', 'delete'],
   worktree: ['add', 'list', 'merge', 'remove'],
-  agent: ['init'],
+  skill: ['install', 'update'],
   hooks: ['init'],
   completion: ['install', 'uninstall'],
 }
@@ -34,6 +35,7 @@ const OPTIONS: Record<string, string[]> = {
   status: ['--config-file', '--fetch'],
   config: ['--edit', '--json', '--config-file'],
   prune: ['--apply', '--config-file'],
+  migrate: ['--dry-run', '--config-file'],
   'profile create': ['--repo', '--repos-dir', '--global-dir', '--config-file'],
   'profile list': ['--json', '--config-file'],
   'profile show': ['--json', '--config-file'],
@@ -42,7 +44,8 @@ const OPTIONS: Record<string, string[]> = {
   'worktree list': ['--all'],
   'worktree merge': ['--into', '--force', '--keep-session', '--keep-worktree', '--keep-branch'],
   'worktree remove': ['--force'],
-  'agent init': ['--force', '--all', '--target', '--global', '--mode', '--source'],
+  'skill install': ['--force', '--target', '--global', '--mode'],
+  'skill update': ['--all'],
 }
 
 // Commands that expect dynamic arguments

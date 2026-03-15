@@ -99,10 +99,35 @@ export function saveConfigFile(config: ConfigFile, configFile?: string): void {
 }
 
 export function getDefaultConfigDir(): string {
-  const xdgConfigHome = process.env.XDG_CONFIG_HOME || path.join(process.env.HOME || '', '.config')
-  return path.join(xdgConfigHome, 'thought-cabinet')
+  if (process.env.XDG_CONFIG_HOME) {
+    return path.join(process.env.XDG_CONFIG_HOME, 'thought-cabinet')
+  }
+  return path.join(process.env.HOME || '', '.thought-cabinet')
+}
+
+export function getLegacyConfigDir(): string {
+  return path.join(process.env.HOME || '', '.config', 'thought-cabinet')
+}
+
+export function resolveConfigDir(): string {
+  const newDir = getDefaultConfigDir()
+  const newConfigPath = path.join(newDir, ConfigResolver.DEFAULT_CONFIG_FILE)
+
+  if (fs.existsSync(newConfigPath)) {
+    return newDir
+  }
+
+  const legacyDir = getLegacyConfigDir()
+  const legacyConfigPath = path.join(legacyDir, ConfigResolver.DEFAULT_CONFIG_FILE)
+
+  if (fs.existsSync(legacyConfigPath)) {
+    return legacyDir
+  }
+
+  // Neither exists — use new location for fresh installs
+  return newDir
 }
 
 export function getDefaultConfigPath(): string {
-  return path.join(getDefaultConfigDir(), ConfigResolver.DEFAULT_CONFIG_FILE)
+  return path.join(resolveConfigDir(), ConfigResolver.DEFAULT_CONFIG_FILE)
 }

@@ -1,10 +1,10 @@
 import { mkdir, cp, readdir, symlink as fsSymlink, lstat, rm, readlink } from 'fs/promises'
 import { join, basename, normalize, resolve, sep, relative, dirname } from 'path'
-import { platform } from 'os'
+import { homedir, platform } from 'os'
 import type { AgentType, Asset, InstallMode, InstallResult, InstallScope } from './types.js'
 import type { AssetCategory } from './constants.js'
 import { agents } from './registry.js'
-import { CATEGORY_SUBDIRS } from './constants.js'
+import { CANONICAL_DIR, CATEGORY_SUBDIRS } from './constants.js'
 
 export function sanitizeName(name: string): string {
   const sanitized = name
@@ -32,6 +32,15 @@ export function getAgentDir(
       ? agent.globalConfigDir
       : join(cwd || process.cwd(), agent.configDir)
   return join(agentBase, CATEGORY_SUBDIRS[category])
+}
+
+export function getCanonicalDir(
+  category: AssetCategory,
+  scope: InstallScope,
+  cwd?: string,
+): string {
+  const baseDir = scope === 'global' ? homedir() : cwd || process.cwd()
+  return join(baseDir, CANONICAL_DIR, CATEGORY_SUBDIRS[category])
 }
 
 async function cleanAndCreateDirectory(dirPath: string): Promise<void> {
@@ -166,20 +175,48 @@ export async function installAssetForAgent(
       return { success: true, path: agentDir, mode: 'copy' }
     }
 
-    // Symlink mode: symlink agent dir directly to source
-    await rm(agentDir, { recursive: true, force: true })
-    await mkdir(dirname(agentDir), { recursive: true })
+    // Symlink mode
+    if (scope === 'project') {
+      // Project scope: use in-repo intermediate to keep symlinks within repo
+      const canonicalBase = getCanonicalDir(asset.category, scope, cwd)
+      const canonicalDir = join(canonicalBase, assetName)
 
-    const symlinkCreated = await createSymlink(asset.sourcePath, agentDir)
+      await cleanAndCreateDirectory(canonicalDir)
+      await copyAsset(canonicalDir)
 
-    if (!symlinkCreated) {
-      // Fallback to copy
-      await cleanAndCreateDirectory(agentDir)
-      await copyAsset(agentDir)
-      return { success: true, path: agentDir, mode: 'symlink', symlinkFailed: true }
+      await rm(agentDir, { recursive: true, force: true })
+      await mkdir(dirname(agentDir), { recursive: true })
+
+      const symlinkCreated = await createSymlink(canonicalDir, agentDir)
+      if (!symlinkCreated) {
+        // Fallback to copy
+        await cleanAndCreateDirectory(agentDir)
+        await copyAsset(agentDir)
+        return {
+          success: true,
+          path: agentDir,
+          canonicalPath: canonicalDir,
+          mode: 'symlink',
+          symlinkFailed: true,
+        }
+      }
+
+      return { success: true, path: agentDir, canonicalPath: canonicalDir, mode: 'symlink' }
+    } else {
+      // Global scope: direct symlink to source (both paths outside repo)
+      await rm(agentDir, { recursive: true, force: true })
+      await mkdir(dirname(agentDir), { recursive: true })
+
+      const symlinkCreated = await createSymlink(asset.sourcePath, agentDir)
+      if (!symlinkCreated) {
+        // Fallback to copy
+        await cleanAndCreateDirectory(agentDir)
+        await copyAsset(agentDir)
+        return { success: true, path: agentDir, mode: 'symlink', symlinkFailed: true }
+      }
+
+      return { success: true, path: agentDir, mode: 'symlink' }
     }
-
-    return { success: true, path: agentDir, mode: 'symlink' }
   } catch (error) {
     return {
       success: false,

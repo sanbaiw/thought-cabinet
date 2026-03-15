@@ -1,31 +1,86 @@
-import fs from 'fs'
-import path from 'path'
+import { existsSync } from 'fs'
+import { dirname, join, resolve } from 'path'
 import chalk from 'chalk'
 import * as p from '@clack/prompts'
 import { fileURLToPath } from 'url'
+import { cp, mkdir, readdir } from 'fs/promises'
 import type { AgentType, AgentInitOptions, Asset, InstallMode, InstallScope } from './types.js'
-import { agents, detectInstalledAgents, getAllAgents } from './registry.js'
+import { agents } from './registry.js'
 import { discoverAllAssets } from './discovery.js'
 import { installAssetForAgent } from './installer.js'
+import { getDefaultConfigDir } from '../../config.js'
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url))
+const __dirname = dirname(fileURLToPath(import.meta.url))
+
+const ASSET_CATEGORIES = ['agents', 'skills'] as const
+
+/** Find the bundled agent-assets directory relative to __dirname */
+export function getBundledAssetsDir(): string | null {
+  const candidates = [
+    resolve(__dirname, '..', 'src', 'agent-assets'),
+    resolve(__dirname, '..', '..', 'src', 'agent-assets'),
+    resolve(__dirname, '..', '..', '..', 'src', 'agent-assets'),
+  ]
+  return candidates.find(dir => existsSync(dir)) ?? null
+}
+
+/**
+ * Copy bundled assets to the config directory when it lacks agents/ and skills/ subdirectories.
+ * Returns the config dir path on success, null if bundledDir is null.
+ */
+export async function bootstrapAssetsIfNeeded(
+  configDir: string,
+  bundledDir: string | null,
+): Promise<string | null> {
+  if (!bundledDir) return null
+
+  const hasAssets = ASSET_CATEGORIES.some(cat => existsSync(join(configDir, cat)))
+  if (hasAssets) return configDir
+
+  for (const category of ASSET_CATEGORIES) {
+    const src = join(bundledDir, category)
+    const dest = join(configDir, category)
+
+    if (!existsSync(src)) continue
+    await mkdir(dest, { recursive: true })
+
+    const entries = await readdir(src, { withFileTypes: true })
+    for (const entry of entries) {
+      if (!entry.isDirectory()) continue
+      await cp(join(src, entry.name), join(dest, entry.name), {
+        recursive: true,
+        force: false,
+        errorOnExist: false,
+      })
+    }
+  }
+
+  return configDir
+}
 
 /**
  * Resolve the source directory for agent assets.
- * Priority: --source flag > bundled assets
+ * Priority: config dir (with asset subdirs) > bootstrap from bundled > bundled fallback.
+ *
+ * Optional configDir and bundledDir parameters override defaults for testability.
  */
-function resolveSourceDir(customSource?: string): string | null {
-  if (customSource) {
-    const resolved = path.resolve(customSource)
-    return fs.existsSync(resolved) ? resolved : null
-  }
+export async function resolveSourceDir(
+  configDir?: string,
+  bundledDir?: string | null,
+): Promise<string | null> {
+  const config = configDir ?? getDefaultConfigDir()
+  const bundled = bundledDir === undefined ? getBundledAssetsDir() : bundledDir
 
-  const candidates = [
-    path.resolve(__dirname, '..', 'src/agent-assets'),
-    path.resolve(__dirname, '../..', 'src/agent-assets'),
-  ]
+  // Priority 1: config directory already has asset subdirectories
+  const hasAssets = ASSET_CATEGORIES.some(cat => existsSync(join(config, cat)))
+  if (hasAssets) return config
 
-  return candidates.find(p => fs.existsSync(p)) ?? null
+  // Priority 2: bootstrap bundled assets into config dir
+  const bootstrapped = await bootstrapAssetsIfNeeded(config, bundled)
+  if (bootstrapped) return bootstrapped
+
+  // Priority 3: fall back to bundled assets directly
+  return bundled
 }
 
 /** Resolve the agent's config directory based on scope */
@@ -33,27 +88,17 @@ function resolveAgentBaseDir(agentType: AgentType, scope: InstallScope, cwd: str
   const agent = agents[agentType]
   return scope === 'global' && agent.globalConfigDir
     ? agent.globalConfigDir
-    : path.join(cwd, agent.configDir)
+    : join(cwd, agent.configDir)
 }
 
 export async function agentInitCommand(options: AgentInitOptions): Promise<void> {
   try {
-    p.intro(chalk.blue('Initialize Agent Configuration'))
+    p.intro(chalk.blue('Install Skills & Agents'))
 
-    if (!process.stdin.isTTY && !options.all) {
-      p.log.error('Not running in interactive terminal.')
-      p.log.info('Use --all flag to install all assets without prompting.')
-      process.exit(1)
-    }
-
-    const sourceDir = resolveSourceDir(options.source)
+    const sourceDir = await resolveSourceDir()
     if (!sourceDir) {
-      p.log.error('Source directory not found.')
-      if (options.source) {
-        p.log.info(`Specified path: ${options.source}`)
-      } else {
-        p.log.info('Bundled agent assets not found. Are you running from the package?')
-      }
+      p.log.error('Agent assets not found.')
+      p.log.info('Bundled agent assets not found. Are you running from the package?')
       process.exit(1)
     }
 
@@ -65,79 +110,18 @@ export async function agentInitCommand(options: AgentInitOptions): Promise<void>
       process.exit(0)
     }
 
-    // Agent selection
-    let selectedAgents: AgentType[]
-
-    if (options.agents) {
-      selectedAgents = options.agents
-    } else if (options.all) {
-      selectedAgents = ['claude-code']
-    } else {
-      const detected = await detectInstalledAgents()
-      const allAgents = getAllAgents()
-
-      const agentSelection = await p.multiselect({
-        message: 'Select target agents:',
-        options: allAgents.map(agent => ({
-          value: agent.name,
-          label: agent.displayName,
-          hint: detected.includes(agent.name) ? 'detected' : undefined,
-        })),
-        initialValues: detected.length > 0 ? detected : ['claude-code'],
-        required: true,
-      })
-
-      if (p.isCancel(agentSelection)) {
-        p.cancel('Operation cancelled.')
-        process.exit(0)
-      }
-
-      selectedAgents = agentSelection as AgentType[]
-    }
-
-    // Scope selection
-    let scope: InstallScope = options.scope ?? 'project'
-
-    if (!options.scope && !options.all) {
-      const supportsGlobal = selectedAgents.some(a => agents[a].globalConfigDir !== undefined)
-
-      if (supportsGlobal) {
-        const scopeChoice = await p.select({
-          message: 'Installation scope:',
-          options: [
-            {
-              value: 'project' as const,
-              label: 'Project',
-              hint: 'Install to current directory',
-            },
-            {
-              value: 'global' as const,
-              label: 'Global',
-              hint: 'Install to home directory (available across projects)',
-            },
-          ],
-          initialValue: 'project' as const,
-        })
-
-        if (p.isCancel(scopeChoice)) {
-          p.cancel('Operation cancelled.')
-          process.exit(0)
-        }
-
-        scope = scopeChoice as InstallScope
-      }
-    }
-
-    // Mode: default to symlink, allow --mode copy override
+    // Deterministic defaults
+    const selectedAgents: AgentType[] = options.agents ?? ['claude-code']
+    const scope: InstallScope = options.scope ?? 'project'
     const mode: InstallMode = options.mode ?? 'symlink'
+    const cwd = process.cwd()
 
-    // Check for existing installations
+    // Check for existing installations (prompt only if TTY and not --force)
     if (!options.force) {
-      const cwd = process.cwd()
       for (const agentType of selectedAgents) {
         const agentDir = resolveAgentBaseDir(agentType, scope, cwd)
 
-        if (fs.existsSync(agentDir) && !options.all) {
+        if (existsSync(agentDir) && process.stdin.isTTY) {
           const overwrite = await p.confirm({
             message: `${agents[agentType].displayName} directory already exists at ${agentDir}. Overwrite?`,
             initialValue: false,
@@ -151,111 +135,53 @@ export async function agentInitCommand(options: AgentInitOptions): Promise<void>
       }
     }
 
-    // Category selection
-    let selectedCategories: string[]
+    // Install all assets
+    const allAssets = [...discovered.skills, ...discovered.agents]
 
-    if (options.all) {
-      selectedCategories = ['agents', 'skills']
-    } else {
-      p.note(
-        'Use ↑/↓ to move, Space to select/deselect, A to toggle all, Enter to confirm.',
-        'Multi-select',
-      )
-
-      const selection = await p.multiselect({
-        message: 'What would you like to install?',
-        options: [
-          {
-            value: 'agents',
-            label: 'Agents',
-            hint: `${discovered.agents.length} specialized sub-agents`,
-          },
-          {
-            value: 'skills',
-            label: 'Skills',
-            hint: `${discovered.skills.length} skill packages`,
-          },
-        ],
-        initialValues: ['agents', 'skills'],
-        required: false,
-      })
-
-      if (p.isCancel(selection)) {
-        p.cancel('Operation cancelled.')
-        process.exit(0)
-      }
-
-      selectedCategories = selection as string[]
-
-      if (selectedCategories.length === 0) {
-        p.cancel('No categories selected.')
-        process.exit(0)
-      }
+    interface InstallEntry {
+      asset: Asset
+      agentType: AgentType
+      success: boolean
+      symlinkFailed?: boolean
+      error?: string
     }
+    const results: InstallEntry[] = []
 
-    // Per-category asset selection
-    const assetsToInstall: Asset[] = []
-    const assetCategories = ['agents', 'skills'] as const
-
-    for (const category of assetCategories) {
-      if (!selectedCategories.includes(category)) continue
-      const categoryAssets = discovered[category]
-      if (categoryAssets.length === 0) continue
-
-      if (options.all) {
-        assetsToInstall.push(...categoryAssets)
-        continue
-      }
-
-      const assetSelection = await p.multiselect({
-        message: `Select ${category} to install:`,
-        options: categoryAssets.map(asset => ({
-          value: asset.name,
-          label: asset.name,
-          hint: asset.description || undefined,
-        })),
-        initialValues: categoryAssets.map(a => a.name),
-        required: false,
-      })
-
-      if (p.isCancel(assetSelection)) {
-        p.cancel('Operation cancelled.')
-        process.exit(0)
-      }
-
-      const selectedNames = new Set(assetSelection as string[])
-      assetsToInstall.push(...categoryAssets.filter(a => selectedNames.has(a.name)))
-    }
-
-    // Install assets
-    const cwd = process.cwd()
-    let totalInstalled = 0
-    let totalFailed = 0
-
-    const s = p.spinner()
-    s.start('Installing assets...')
-
-    for (const asset of assetsToInstall) {
+    for (const asset of allAssets) {
       for (const agentType of selectedAgents) {
         const result = await installAssetForAgent(asset, agentType, { scope, cwd, mode })
+        results.push({
+          asset,
+          agentType,
+          success: result.success,
+          symlinkFailed: result.symlinkFailed,
+          error: result.error,
+        })
+      }
+    }
 
-        if (result.success) {
-          totalInstalled++
-          if (result.symlinkFailed) {
-            p.log.warn(
-              `${asset.name} → ${agents[agentType].displayName}: symlink failed, copied instead`,
-            )
-          }
+    // Print itemized list by category
+    for (const category of ASSET_CATEGORIES) {
+      const categoryResults = results.filter(r => r.asset.category === category)
+      if (categoryResults.length === 0) continue
+
+      const label = category.charAt(0).toUpperCase() + category.slice(1)
+      p.log.step(chalk.bold(label))
+
+      for (const entry of categoryResults) {
+        if (entry.success && entry.symlinkFailed) {
+          p.log.warn(`  ⚠ ${entry.asset.name} (symlink failed, copied instead)`)
+        } else if (entry.success) {
+          p.log.success(`  ✓ ${entry.asset.name}`)
         } else {
-          totalFailed++
-          p.log.warn(`Failed: ${asset.name} → ${agents[agentType].displayName}: ${result.error}`)
+          p.log.error(`  ✗ ${entry.asset.name}: ${entry.error}`)
         }
       }
     }
 
-    s.stop('Installation complete.')
-
     // Summary
+    const totalInstalled = results.filter(r => r.success).length
+    const totalFailed = results.filter(r => !r.success).length
     const agentNames = selectedAgents.map(a => agents[a].displayName).join(', ')
     let message = `Installed ${totalInstalled} asset(s) to ${agentNames}`
     if (totalFailed > 0) {
