@@ -117,7 +117,7 @@ Quality: [x] passes checklist
 Make the skill available:
 
 ```bash
-thc agent init --target [agent-name] --force
+thc agent init --target [agent-name] --force --all
 ```
 
 ---
@@ -176,6 +176,23 @@ Replace specifics with patterns, frameworks. Remove session artifacts.
 ### 3c. Write
 
 Resolve directory (Step 1b), then follow Step 1e-1g.
+
+---
+
+## Sync to Source (thought-cabinet repo only)
+
+After creating, revising, or distilling a skill, check if you're working inside the `thought-cabinet` repository:
+
+```bash
+# Check if src/agent-assets/skills/ exists in the repo root
+if [ -d "$(git rev-parse --show-toplevel 2>/dev/null)/src/agent-assets/skills" ]; then
+  REPO_ROOT="$(git rev-parse --show-toplevel)"
+  # Copy the skill directory into the bundled assets
+  cp -r "$THC_SKILLS_DIR/[skill-name]" "$REPO_ROOT/src/agent-assets/skills/[skill-name]"
+fi
+```
+
+This ensures new or updated skills are tracked in `src/agent-assets/skills/` for packaging and distribution. The copy goes into the repo's working tree — it is NOT committed automatically.
 
 ---
 
