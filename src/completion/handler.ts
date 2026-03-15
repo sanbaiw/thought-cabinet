@@ -44,7 +44,7 @@ const OPTIONS: Record<string, string[]> = {
   'worktree list': ['--all'],
   'worktree merge': ['--into', '--force', '--keep-session', '--keep-worktree', '--keep-branch'],
   'worktree remove': ['--force'],
-  'skill install': ['--force', '--all', '--target', '--global', '--mode'],
+  'skill install': ['--force', '--target', '--global', '--mode'],
   'skill update': ['--all'],
 }
 

@@ -55,6 +55,4 @@ export interface AgentInitOptions {
   scope?: InstallScope
   mode?: InstallMode
   force?: boolean
-  /** Install all assets without prompting */
-  all?: boolean
 }

@@ -91,20 +91,19 @@ thc migrate --dry-run  # Show what would be migrated without changes
 
 ## Agent Configuration
 
-### `thc agent init`
+### `thc skill install`
 
-Interactively discover and install skills and agents to your AI coding agent's config directory.
+Install all bundled skills and agents to your AI coding agent's config directory.
 
 Assets are installed via **symlink** by default: a canonical copy is stored in `.thought-cabinet/` (project) or `~/.thought-cabinet/` (global), and symlinks are created in the agent's config directory. This means updating the canonical copy updates all agents at once.
 
 ```bash
-thc agent init                          # Interactive installation
-thc agent init --all                    # Install all without prompting
-thc agent init --target claude-code     # Install for a specific agent
-thc agent init --target cursor codex    # Install for multiple agents
-thc agent init --global                 # Install to global scope
-thc agent init --mode copy              # Copy files instead of symlinking
-thc agent init --force                  # Overwrite existing installations
+thc skill install                       # Install all assets
+thc skill install --target claude-code  # Install for a specific agent
+thc skill install --target cursor codex # Install for multiple agents
+thc skill install --global              # Install to global scope
+thc skill install --mode copy           # Copy files instead of symlinking
+thc skill install --force               # Overwrite existing installations
 ```
 
 | Flag                   | Description                                                                                |
@@ -113,7 +112,6 @@ thc agent init --force                  # Overwrite existing installations
 | `-g, --global`         | Install to global scope                                                                    |
 | `--mode <mode>`        | Installation mode: `symlink` (default) or `copy`                                           |
 | `--force`              | Force overwrite of existing installations                                                  |
-| `--all`                | Install all assets without prompting                                                       |
 
 #### Installed Skills
 

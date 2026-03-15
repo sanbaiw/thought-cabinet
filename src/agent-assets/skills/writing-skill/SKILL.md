@@ -117,7 +117,7 @@ Quality: [x] passes checklist
 Make the skill available:
 
 ```bash
-thc agent init --target [agent-name] --force --all
+thc skill install --target [agent-name] --force
 ```
 
 ---

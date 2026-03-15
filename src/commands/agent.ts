@@ -14,7 +14,6 @@ export function skillCommand(program: Command): void {
     .option('-g, --global', 'Install to global scope')
     .option('--mode <mode>', 'Installation mode: symlink or copy (default: symlink)')
     .option('--force', 'Force overwrite of existing installations')
-    .option('--all', 'Install all assets without prompting')
     .action(async options => {
       const agentTypes: AgentType[] | undefined = options.target?.map((a: string) => {
         if (!isValidAgentType(a)) {
@@ -38,7 +37,6 @@ export function skillCommand(program: Command): void {
         scope: options.global ? 'global' : undefined,
         mode,
         force: options.force,
-        all: options.all,
       })
     })
 
