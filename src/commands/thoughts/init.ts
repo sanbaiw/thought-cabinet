@@ -104,6 +104,18 @@ export async function thoughtsInitCommand(options: InitOptions): Promise<void> {
 
     // If no config exists, we need to set it up first
     if (!config) {
+      if (options.directory) {
+        // Non-interactive: use sensible defaults
+        const thoughtsRepo = getDefaultThoughtsRepo()
+        const reposDir = 'repos'
+        const globalDir = 'global'
+        const user = process.env.USER || 'user'
+
+        config = { thoughtsRepo, reposDir, globalDir, user, repoMappings: {} }
+        ensureThoughtsRepoExists(thoughtsRepo, reposDir, globalDir)
+        saveThoughtsConfig(config, options)
+        p.log.success('Global thoughts configuration created with defaults')
+      } else {
       p.intro(chalk.blue('Initial Thoughts Setup'))
 
       p.log.info("First, let's configure your global thoughts system.")
@@ -200,6 +212,7 @@ export async function thoughtsInitCommand(options: InitOptions): Promise<void> {
       // Save initial config
       saveThoughtsConfig(config, options)
       p.log.success('Global thoughts configuration created')
+      }
     }
 
     // Validate profile if specified
@@ -323,19 +336,17 @@ export async function thoughtsInitCommand(options: InitOptions): Promise<void> {
         // Non-interactive mode with --directory option
         const sanitizedDir = sanitizeDirectoryName(options.directory)
 
-        if (!existingRepos.includes(sanitizedDir)) {
-          p.log.error(`Directory "${sanitizedDir}" not found in thoughts repository.`)
-          p.log.error('In non-interactive mode (--directory), you must specify a directory')
-          p.log.error('name that already exists in the thoughts repository.')
-          p.log.warn('Available directories:')
-          existingRepos.forEach(repo => p.log.message(chalk.gray(`  - ${repo}`)))
-          process.exit(1)
+        if (existingRepos.includes(sanitizedDir)) {
+          p.log.success(
+            `Using existing: ${tempProfileConfig.thoughtsRepo}/${tempProfileConfig.reposDir}/${sanitizedDir}`,
+          )
+        } else {
+          p.log.success(
+            `Will create: ${tempProfileConfig.thoughtsRepo}/${tempProfileConfig.reposDir}/${sanitizedDir}`,
+          )
         }
 
         mappedName = sanitizedDir
-        p.log.success(
-          `Using existing: ${tempProfileConfig.thoughtsRepo}/${tempProfileConfig.reposDir}/${mappedName}`,
-        )
       } else {
         // Interactive mode
         p.intro(chalk.blue('Repository Setup'))

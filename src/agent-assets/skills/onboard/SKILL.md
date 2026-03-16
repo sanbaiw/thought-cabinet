@@ -10,7 +10,7 @@ Set up a new project for AI-assisted development: initialize the thoughts repo a
 ## Workflow Context
 
 This skill orchestrates two capabilities that are normally run separately:
-- `thc thoughts init` — connects the project to a thoughts repo
+- `thc init` — connects the project to a thoughts repo
 - `init-agent-memory` skill — creates AGENTS.md and supporting docs
 
 After onboarding, the project is ready for skills like `creating-plan`, `research-codebase`, and `implementing-plan`.
@@ -18,7 +18,7 @@ After onboarding, the project is ready for skills like `creating-plan`, `researc
 ## Workflow Overview
 
 1. **Pre-flight** - Verify git repo, check existing setup, confirm thc is available
-2. **Initialize thoughts** - Run `thc thoughts init` to connect the thoughts repo
+2. **Initialize thoughts** - Run `thc init` to connect the thoughts repo
 3. **Bootstrap agent memory** - Create AGENTS.md and CLAUDE.md via the init-agent-memory skill
 4. **Verify and present** - Confirm everything is wired up correctly
 
@@ -70,7 +70,7 @@ Install it from the thought-cabinet repository, then re-run this skill.
 
 ## Step 2: Initialize Thoughts
 
-Run `thc thoughts init` interactively. This will:
+Run `thc init` interactively. This will:
 - Create or connect to a thoughts git repo
 - Map the current repository to a named directory
 - Create `thoughts/` with symlinks (`{user}/`, `shared/`, `global/`)
@@ -78,12 +78,12 @@ Run `thc thoughts init` interactively. This will:
 - Install git hooks (pre-commit to prevent committing thoughts/, post-commit to auto-sync)
 
 ```bash
-thc thoughts init
+thc init
 ```
 
-**If `--directory` is known** (e.g., from a previous run or user input), use non-interactive mode:
+**For non-interactive mode** (recommended for automation and skill scripts), derive the directory name from the repo basename. This works even on first run — `thc init` will auto-create the global config with defaults and create the directory if it doesn't exist:
 ```bash
-thc thoughts init --directory <name>
+thc init --directory "$(basename "$(pwd)")"
 ```
 
 After init completes, verify:
