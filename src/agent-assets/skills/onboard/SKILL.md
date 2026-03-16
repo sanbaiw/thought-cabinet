@@ -17,121 +17,39 @@ After onboarding, the project is ready for skills like `creating-plan`, `researc
 
 ## Workflow Overview
 
-1. **Pre-flight** - Verify git repo, check existing setup, confirm thc is available
-2. **Initialize thoughts** - Run `thc init` to connect the thoughts repo
-3. **Bootstrap agent memory** - Create AGENTS.md and CLAUDE.md via the init-agent-memory skill
-4. **Verify and present** - Confirm everything is wired up correctly
+1. **Pre-flight + Initialize thoughts** - Run `onboard.sh`: check environment, run `thc init`
+2. **Bootstrap agent memory** - Invoke `init-agent-memory` skill (if needed)
+3. **Verify** - Run `onboard.sh --verify-only`: confirm everything is wired up
 
-## Step 1: Pre-flight
+## Step 1: Pre-flight and Initialize Thoughts
 
-### 1a. Verify git repository
+Run: `bash onboard.sh`
 
+**Exit codes determine next action**:
+- **1** — Fatal error (not a git repo, thc missing, init failed). Stop and report.
+- **2** — Thoughts ready, AGENTS.md not found. Proceed to Step 2.
+- **3** — Thoughts + AGENTS.md both exist. Ask user if they want to regenerate memory or skip to Step 3.
+
+If thoughts was already initialized and user wants to re-initialize:
 ```bash
-git rev-parse --git-dir > /dev/null 2>&1
+bash onboard.sh --force
 ```
 
-If not a git repo, tell the user and stop:
-```
-This directory is not a git repository. Please run `git init` first or navigate to an existing repo.
-```
-
-### 1b. Check existing setup
-
-Check what's already done to avoid redundant work:
-
-```bash
-# Check if thoughts/ directory exists with valid symlinks
-[ -L thoughts/shared ] && echo "thoughts: initialized" || echo "thoughts: not initialized"
-
-# Check if AGENTS.md or CLAUDE.md exists
-[ -f AGENTS.md ] && echo "memory: exists" || echo "memory: not found"
-[ -f CLAUDE.md ] && echo "claude-md: exists" || echo "claude-md: not found"
-```
-
-If thoughts is already initialized, ask the user:
-```
-Thoughts directory is already initialized. Do you want to:
-1. Skip thoughts init and proceed with memory bootstrap
-2. Re-initialize with --force
-3. Cancel
-```
-
-### 1c. Check ThoughtCabinet availability
-
-```bash
-command -v thoughtcabinet > /dev/null 2>&1 || command -v thc > /dev/null 2>&1
-```
-
-If neither command is available:
-```
-ThoughtCabinet CLI (`thc`) is not installed or not in PATH.
-Install it from the thought-cabinet repository, then re-run this skill.
-```
-
-## Step 2: Initialize Thoughts
-
-Run `thc init` interactively. This will:
-- Create or connect to a thoughts git repo
-- Map the current repository to a named directory
-- Create `thoughts/` with symlinks (`{user}/`, `shared/`, `global/`)
-- Generate `thoughts/CLAUDE.md` with usage guidance
-- Install git hooks (pre-commit to prevent committing thoughts/, post-commit to auto-sync)
-
-```bash
-thc init
-```
-
-**For non-interactive mode** (recommended for automation and skill scripts), derive the directory name from the repo basename. This works even on first run — `thc init` will auto-create the global config with defaults and create the directory if it doesn't exist:
-```bash
-thc init --directory "$(basename "$(pwd)")"
-```
-
-After init completes, verify:
-```bash
-[ -L thoughts/shared ] && [ -L thoughts/global ] && echo "thoughts: OK" || echo "thoughts: FAILED"
-```
-
-If verification fails, stop and report the error.
-
-## Step 3: Bootstrap Agent Memory
+## Step 2: Bootstrap Agent Memory
 
 **If AGENTS.md already exists**: Ask the user whether to regenerate or skip.
 
-**If AGENTS.md does not exist**: Invoke the `init-agent-memory` skill to create it.
+**If AGENTS.md does not exist**: Invoke the `init-agent-memory` skill.
 
-The init-agent-memory skill will:
-1. Research the codebase (tech stack, directories, commands, patterns)
-2. Propose an AGENTS.md structure
-3. Write AGENTS.md (under 150 lines) and docs/architectural-patterns.md
-4. Create CLAUDE.md as a symlink to AGENTS.md
-
-**Important**: The `thoughts/CLAUDE.md` generated in Step 2 and the root `CLAUDE.md` from this step serve different purposes:
-- `thoughts/CLAUDE.md` — explains the thoughts directory structure and usage rules
+**Note**: `thoughts/CLAUDE.md` (from Step 1) and root `CLAUDE.md` (from this step) serve different purposes:
+- `thoughts/CLAUDE.md` — thoughts directory usage rules
 - `./CLAUDE.md` — project memory for the AI agent (symlink to AGENTS.md)
 
-## Step 4: Verify and Present
+## Step 3: Verify and Present
 
-Run a final verification:
+Run: `bash onboard.sh --verify-only`
 
-```bash
-echo "=== Onboarding Status ==="
-
-# Thoughts
-[ -L thoughts/shared ] && [ -L thoughts/global ] && echo "[OK] thoughts/ initialized" || echo "[FAIL] thoughts/ not initialized"
-
-# Agent memory
-[ -f AGENTS.md ] && echo "[OK] AGENTS.md created" || echo "[SKIP] AGENTS.md not created"
-[ -L CLAUDE.md ] && echo "[OK] CLAUDE.md symlink" || ([ -f CLAUDE.md ] && echo "[OK] CLAUDE.md exists" || echo "[SKIP] CLAUDE.md not created")
-
-# Git hooks
-GIT_DIR=$(git rev-parse --git-common-dir 2>/dev/null)
-[ -f "$GIT_DIR/hooks/pre-commit" ] && echo "[OK] pre-commit hook" || echo "[WARN] no pre-commit hook"
-[ -f "$GIT_DIR/hooks/post-commit" ] && echo "[OK] post-commit hook" || echo "[WARN] no post-commit hook"
-
-echo "=== Done ==="
-```
-
-Present results:
+Present results to user:
 
 ```
 Project onboarding complete!
@@ -147,10 +65,10 @@ If any step was skipped or failed, note it clearly with suggested remediation.
 
 ## Guidelines
 
-**Be incremental**: Each step checks preconditions and skips if already done. Re-running the skill should be safe.
+**Be incremental**: Re-running the skill should be safe — each step skips if already done.
 
-**Fail fast**: If a critical step fails (thoughts init, thc not installed), stop and report rather than continuing with a broken setup.
+**Fail fast**: If a critical step fails, stop and report rather than continuing with a broken setup.
 
-**Minimal prompting**: Only ask questions when the answer cannot be inferred from the environment. Detect existing setup automatically.
+**Minimal prompting**: Only ask questions when the answer cannot be inferred from the environment.
 
 **Respect existing work**: Never overwrite AGENTS.md, CLAUDE.md, or thoughts/ without explicit user confirmation.
