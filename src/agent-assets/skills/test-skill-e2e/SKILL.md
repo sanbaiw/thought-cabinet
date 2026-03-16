@@ -22,8 +22,7 @@ Determine three things from the user or surrounding context:
 | Input | Example |
 |-------|---------|
 | Skill to test | `onboard`, or path like `src/agent-assets/skills/onboard/SKILL.md` |
-| Agent CLI | `codex`, `claude`, `cline` |
-| Test project directory | `/home/user/playground/my-test-project` |
+| Agent CLI | `codex`, `claude` |
 
 Once identified, read the target skill's SKILL.md to understand:
 - What the skill does (description, workflow steps)
@@ -194,8 +193,6 @@ Notes: <any observations>
 If any step failed, include the relevant log excerpt and suggested remediation.
 
 ## Guidelines
-
-**Non-destructive**: Never run against production repos. Always use a test or playground project.
 
 **Idempotent cleanup**: The prepare step (Step 3) should make the test fully repeatable. Running the test twice in a row should produce the same result.
 
