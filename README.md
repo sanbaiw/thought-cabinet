@@ -21,23 +21,44 @@ Thought Cabinet solves these by providing:
 ## Quick Start
 
 ```bash
-cd your-project
-
 # 1. Install
 pnpm install -g thought-cabinet
 
-# 2. Initialize thoughts in your project
-thc init
-
-# 3. Install skills to your AI agent
+# 2. Install skills to your AI agent
+cd your-project
 thc skill install
 
-# 4. Use skills in your agent session (e.g. Claude Code)
+# 3. Onboard the project (in your agent session)
+> /onboard
+```
+
+The `/onboard` skill initializes thoughts, creates agent memory (`AGENTS.md`), and installs git hooks — all in one step.
+
+Once onboarded, use the workflow skills:
+
+```bash
 > /research-codebase How does the authentication system work?
 > /creating-plan Add OAuth2 support based on the research
 > /implementing-plan thoughts/shared/plans/add-oauth.md
 > /validating-plan thoughts/shared/plans/add-oauth.md
 ```
+
+<details>
+<summary>Manual setup (without the onboard skill)</summary>
+
+If you prefer to set up manually instead of using `/onboard`:
+
+```bash
+cd your-project
+
+# Initialize thoughts
+thc init
+
+# Install skills to your AI agent
+thc skill install
+```
+
+</details>
 
 ## Skills
 
@@ -45,6 +66,7 @@ Skills are installed by `thc skill install` and invoked as slash commands in you
 
 | Skill                | Description                                                           |
 | -------------------- | --------------------------------------------------------------------- |
+| `/onboard`           | Initialize thoughts and bootstrap agent memory for a new project      |
 | `/research-codebase` | Deep-dive into codebase, save findings to `thoughts/shared/research/` |
 | `/creating-plan`     | Create implementation plan with phases and success criteria           |
 | `/iterating-plan`    | Refine existing plans based on feedback                               |
