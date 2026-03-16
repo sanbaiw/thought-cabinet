@@ -8,9 +8,9 @@ export default [
     ignores: [
       '.claude/**',
       'src/agent-assets/**',
-      'src/agent-assests/**',
       'dist/**',
       'node_modules/**',
+      '.thought-cabinet/**',
     ],
   },
   // JavaScript files
