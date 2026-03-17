@@ -50,11 +50,23 @@
 
 **File**: `path/to/file.ext`
 **Changes**: [Summary of changes]
-**Testable behaviors**: [List the behaviors this change introduces or modifies — these become TDD RED tests during implementation]
+
+##### Testable Behaviors (RED tests)
+
+> Each bullet is one TDD RED test. `implementing-plan` writes each test first, watches it fail, then writes the minimal code to pass it.
+
+- [Input/condition] → [expected output/behavior]
+- [Edge case] → [expected behavior]
+- [Error case] → [expected fallback]
+
+##### Reference Implementation
 
 ```[language]
-// Specific code to add/modify
+// Suggested implementation — written AFTER the RED tests pass.
+// implementing-plan must not read this before writing the failing tests.
 ```
+
+---
 
 ### Success Criteria:
 
@@ -81,18 +93,11 @@
 
 ---
 
-## Testing Strategy
+## Integration Testing
 
-### Unit Tests:
+[End-to-end scenarios that require multiple components working together — not covered by unit tests above]
 
-- [What to test]
-- [Key edge cases]
-
-### Integration Tests:
-
-- [End-to-end scenarios]
-
-### Manual Testing Steps:
+## Manual Testing Steps
 
 1. [Specific verification step]
 2. [Edge case to test manually]
@@ -125,6 +130,26 @@ Always separate into two categories:
 - UI/UX functionality
 - Performance under real conditions
 - User acceptance criteria
+
+## TDD Compatibility Requirements
+
+When writing each change block, ask:
+
+1. **Are the testable behaviors specific enough to write a failing test from?**
+   - Bad: "handles null input"
+   - Good: "`envCreateTime=null` with cutoff set → returns `false` (safe fallback)"
+
+2. **Is the behavior written before the code block?**
+   - The testable behaviors section must appear before the reference implementation.
+   - The implementer reads behaviors first and writes the RED test before reading the code.
+
+3. **Does each bullet map to exactly one test?**
+   - Compound behaviors (A and B) → split into two bullets.
+   - Each bullet = one `def "..."()` / `it(...)` / `test(...)`.
+
+4. **Is the code block labeled "Reference Implementation"?**
+   - Never label it "Code to write" or "Implementation".
+   - The label signals it is consulted only after RED → GREEN, not before.
 
 ## Common Patterns
 

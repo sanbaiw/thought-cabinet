@@ -144,6 +144,12 @@ After structure approval:
 
 2. **Write plan** using [plan-template.md](plan-template.md)
    - **MUST** Read the template and follow the structure exactly.
+   - **TDD compatibility check**: For every change block, verify:
+     - `Testable Behaviors` appears **before** `Reference Implementation`
+     - Each testable behavior bullet is specific enough to write a failing test from (includes input, condition, and expected output/behavior)
+     - Each bullet maps to exactly one test — split compound behaviors
+     - The code block is labeled "Reference Implementation", not "Code to write"
+   - If a change block has no conditional logic, no data transformation, and is a pure pass-through, it may omit testable behaviors — document why.
 
 3. **Sync thoughts directory**:
    ```bash

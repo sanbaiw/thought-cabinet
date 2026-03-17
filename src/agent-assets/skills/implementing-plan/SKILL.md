@@ -90,9 +90,36 @@ How should I proceed?
 Before writing any production code for a phase:
 
 1. Read existing test files for the modules being changed (if not already read in Getting Started)
-2. Identify the testable behaviors the phase introduces or changes
-3. Apply the `test-driven-development` RED-GREEN-REFACTOR cycle for each behavior
-4. Only after all TDD cycles are complete, proceed to the completion checklist below
+2. For each change block in the phase, read only the **Testable Behaviors** section — do NOT read the Reference Implementation yet
+3. For each testable behavior bullet, execute one RED-GREEN-REFACTOR cycle:
+   - **RED**: Write one failing test for that behavior. Run it. Confirm it fails for the right reason.
+   - **GREEN**: Write the minimal production code to pass it. Run it. Confirm it passes.
+   - **REFACTOR**: Clean up. Run tests. Stay green.
+4. Only after all behavior bullets have passing tests, read the Reference Implementation and reconcile — adjust your implementation if it diverges from the plan's intent, but do not delete passing tests.
+5. Proceed to the phase completion checklist.
+
+### How to Extract Work Items from a Plan Change Block
+
+A change block looks like:
+
+```
+##### Testable Behaviors (RED tests)
+- `cutoff empty` → `isEnvCreatedAfterCutoff` returns `true`
+- `createTime after cutoff` → returns `true`
+- `createTime before cutoff` → returns `false`
+- `createTime null + cutoff set` → returns `false` (safe fallback)
+
+##### Reference Implementation
+[code]
+```
+
+Map this to a work queue:
+1. `def "isEnvCreatedAfterCutoff: cutoff empty returns true"()` → RED → GREEN
+2. `def "isEnvCreatedAfterCutoff: createTime after cutoff returns true"()` → RED → GREEN
+3. `def "isEnvCreatedAfterCutoff: createTime before cutoff returns false"()` → RED → GREEN
+4. `def "isEnvCreatedAfterCutoff: null createTime with cutoff set returns false"()` → RED → GREEN
+
+Each bullet is one test. Complete all cycles for this change block before moving to the next.
 
 ## Phase Completion Checklist
 
